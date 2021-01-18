@@ -1,6 +1,6 @@
-update=1/16/2021 7:12:37 PM
+update=1/17/2021 11:43:24 AM
 version=1
-last_client=eeschema
+last_client=pcbnew
 [general]
 version=1
 RootSch=
@@ -12,12 +12,22 @@ NetIExt=net
 version=1
 LibDir=
 [eeschema/libraries]
+[schematic_editor]
+version=1
+PageLayoutDescrFile=
+PlotDirectoryName=
+SubpartIdSeparator=0
+SubpartFirstId=65
+NetFmtName=
+SpiceAjustPassiveValues=0
+LabSize=100
+ERC_TestSimilarLabels=1
 [pcbnew]
 version=1
 PageLayoutDescrFile=
 LastNetListRead=
 CopperLayerCount=4
-BoardThickness=1.6
+BoardThickness=0.8
 AllowMicroVias=0
 AllowBlindVias=0
 RequireCourtyardDefinitions=1
@@ -56,7 +66,7 @@ CopperTextThickness=0.3048
 CopperTextItalic=0
 CopperTextUpright=1
 EdgeCutLineWidth=0.03809999999999999
-CourtyardLineWidth=0.0508
+CourtyardLineWidth=0.05
 OthersLineWidth=0.1524
 OthersTextSizeV=1.016
 OthersTextSizeH=1.016
@@ -245,13 +255,3 @@ uViaDrill=0.3302
 dPairWidth=0.1524
 dPairGap=0.254
 dPairViaGap=0.25
-[schematic_editor]
-version=1
-PageLayoutDescrFile=
-PlotDirectoryName=
-SubpartIdSeparator=0
-SubpartFirstId=65
-NetFmtName=
-SpiceAjustPassiveValues=0
-LabSize=100
-ERC_TestSimilarLabels=1

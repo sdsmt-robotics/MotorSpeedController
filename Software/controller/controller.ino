@@ -19,6 +19,8 @@
 #include "AS5134.h"
 #include <SimpleKalmanFilter.h>
 
+#define TESTING 1
+
 // Define the pins
 #define LED_PIN 1
 
@@ -311,7 +313,7 @@ ISR(TIMER2_COMPA_vect) {
 }
 
 //=====TEST FUNCTIONS================================================
-
+#if TESTING
 /**
  * Test basic motor functionality.
  */
@@ -881,3 +883,4 @@ void testSpeedControls() {
     lastPrint = millis();
   }
 }
+#endif
