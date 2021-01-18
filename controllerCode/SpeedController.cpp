@@ -17,7 +17,7 @@
 /**
  * @brief Constructor for the class.
  */
-SpeedController::SpeedController() : outputFilter(5)/*outputFilter(25, 25, 0.01)*/ {
+SpeedController::SpeedController() : outputFilter(10)/*outputFilter(25, 25, 0.01)*/ {
     lastTime = micros();
     lastError = 0;
     integral = 0;
@@ -25,8 +25,18 @@ SpeedController::SpeedController() : outputFilter(5)/*outputFilter(25, 25, 0.01)
     targetSpeed = 0;
 
     //constrain the integral so it doesn't run away.
-    maxIntegral = maxOutput / ki * 4;
-    minIntegral = minOutput / ki * 4;
+    maxIntegral = maxOutput / ki * 2;
+}
+
+/**
+ * Reset values in the speed controller.
+ */
+void SpeedController::reset() {
+    integral = 0;
+    derivative = 0;
+    lastError = 0;
+    outputFilter.reset(0);
+    lastTime = micros();
 }
  
 /**
@@ -37,7 +47,7 @@ SpeedController::SpeedController() : outputFilter(5)/*outputFilter(25, 25, 0.01)
 int SpeedController::calcOutput(int curSpeed) {
   long curTime = micros();
   int error = 0;
-  int output = 0;
+  float output = 0;
   float elapsedTime;
 
   //update the time
@@ -48,8 +58,8 @@ int SpeedController::calcOutput(int curSpeed) {
 
   //Get the integral of the error
   integral += (float)error * elapsedTime;
-  if (integral < minIntegral) {
-    integral = minIntegral;
+  if (integral < -maxIntegral) {
+    integral = -maxIntegral;
   } else if (integral > maxIntegral) {
     integral = maxIntegral;
   }
@@ -65,9 +75,7 @@ int SpeedController::calcOutput(int curSpeed) {
   lastTime = curTime;
 
   //return the filtered and caped output
-  //return outputFilter.updateEstimate(constrain(output, minOutput, maxOutput));
   return outputFilter.filter(constrain(output, minOutput, maxOutput));
-  //return constrain(output, minOutput, maxOutput);
 }
 
 /**

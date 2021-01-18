@@ -20,6 +20,7 @@ public:
     void setOutputLimits(int min, int max);
     void setTarget(int targetSpeed);
     int getTarget();
+    void reset();
 
     int calcOutput(int curSpeed);
     
@@ -28,6 +29,10 @@ public:
     float derivative = 0;
     int lastError;
 
+    //Define PID constants
+    float kp = 1;    //guess: float(abs(maxOutput - minOutput)) / abs(maxInput - minInput);
+    float ki = 1;
+    float kd = 1;
 private:
     Filter outputFilter;  //filter to smooth output values
     //SimpleKalmanFilter outputFilter;
@@ -37,17 +42,12 @@ private:
     //output limits
     int maxOutput = 255;   //max output we will send
     int minOutput = 0;     //min output we will send
-    float maxIntegral;  //max value for the integral
-    float minIntegral;  //min value for the integral
+    float maxIntegral;  //max magnitued for the integral
 
     //values from the most recent speed calculation
     long lastTime;
 
 
-    //Define PID constants
-    float kp = 1;    //guess: float(abs(maxOutput - minOutput)) / abs(maxInput - minInput);
-    float ki = 1;
-    float kd = 1;
 };
 
 

@@ -8,28 +8,18 @@
  * setDirection(Direction invertDir) - set the default the motor direction.
  * getDirection() - get the motor direction
  * 
- * Note: this class is only set up to support four encoders. More is possible, 
- * but they will have to be added.
  */
 
 #include "Nidec24H.h"
 
-// for use by ISR glue routines
-Nidec24H * Nidec24H::instance0;
-Nidec24H * Nidec24H::instance1;
-Nidec24H * Nidec24H::instance2;
-Nidec24H * Nidec24H::instance3;
-
 /**
- * @brief Constructor for the class.
+ * @brief Constructor for the class. PWM Pin must be 9 on atmega328!
  * 
- * @param pwmPin - pin to control speed using PWM.
  * @param dirPin - pin to toggle motor direction.
  * @param brakePin - pin to brake to toggle motor braking.
- * @param fgPin - digital pin number for reading encoder ticks. Must be an inturrupt pin.
  */
-Nidec24H::Nidec24H(int pwmPin, int dirPin, int brakePin, int fgPin) 
-    : pwmPin(pwmPin), dirPin(dirPin), brakePin(brakePin), fgPin(fgPin), speedFilter(150, 150, 0.05) {
+Nidec24H::Nidec24H(int dirPin, int brakePin) 
+    : dirPin(dirPin), brakePin(brakePin) {
 }
 
 /**
@@ -37,75 +27,79 @@ Nidec24H::Nidec24H(int pwmPin, int dirPin, int brakePin, int fgPin)
  */
 void Nidec24H::init() {
     //Setup control pins
-    pinMode(pwmPin, OUTPUT);
     pinMode(dirPin, OUTPUT);
     pinMode(brakePin, OUTPUT);
+
+    // Set up the PWM pin
+    initPwm();
     
-    //Set up the encoder pin if given
-    if (fgPin != -1) {
-        int intNum = digitalPinToInterrupt(fgPin);
-        pinMode(fgPin, INPUT_PULLUP);
-        instance0 = this;
-        attachInterrupt(intNum, Nidec24H::isr0, RISING);
-
-        //We can't pass a class method into the attachInterrupt function. So, 
-        //we instead track instances and have dedicated ISRs to forward the 
-        //interrupt on to the actual handler function of the given instance.
-        switch (intNum) {
-        case 0:
-            instance0 = this;
-            attachInterrupt(intNum, Nidec24H::isr0, RISING);
-            break;
-        
-        case 1:
-            instance1 = this;
-            attachInterrupt(intNum, Nidec24H::isr1, RISING);
-            break;
-        
-        case 2:
-            instance2 = this;
-            attachInterrupt(intNum, Nidec24H::isr2, RISING);
-            break;
-        
-        case 3:
-            instance3 = this;
-            attachInterrupt(intNum, Nidec24H::isr3, RISING);
-            break;
-        
-        default:
-            break;
-        }
-
-        //initialize the timer
-        fgTime = micros();
-    }
-
     //Initialize the power
     setPower(0);
 }
 
-/**
- * @brief set the motor to run in the given direction
- * 
- * @param direction - new direction for the motor to run
- */
-void Nidec24H::setDirection(Direction direction) {
-    this->direction = direction;
+void Nidec24H::initPwm() {
+    /*
+    A bit of explanation for those who care...
+    On the Arduino Uno, there are 8-bit and 16-bit timer/counters (0, 1, 2). Timer 0 (I think) is 
+    special and used by millis() and delay(), so don't mess with it. Each timer is used 
+    by 2-3 pins.
+    Pins 8 and 9 use timer 1.
+    Description of registers (n = timer #, x = pin letter):
+      - TCCRnA/B/C: Timer/Counter control registers A, B, and C. Set timer source, mode, etc.
+      - OCRnx - Output compare register. Value set for the pin to control duty cycle.
+      - ICRn - Input caputer register. Used as the TOP (reset) value in phase correct PWM mode.
+      - TCNTn - Timer/Counter for the clock. The current count for the cycle.
+
+    OCnx is the output.
+    */
+
+    // Clear the control registers.
+    TCCR1A = 0;
+    TCCR1B = 0;
+    TCNT1  = 0;
+
+    // Mode 10: phase correct PWM with ICR1 as Top (= F_CPU/2/16000)
+    // OC1C as Non-Inverted PWM output
+    // TOP = 1000
+    // Bits set:
+    //  - COM = 0b10 (clear output on match when upcounting, set output on match when downcounting)
+    //  - WGM = 0b1010 (wave generation mode = phase correct PWM with ICR4 as the prescaler)
+    //  - CS = 0b001 (Clock source 1, no prescaling)
+    ICR1   = (F_CPU/8000)/2;      // Get the prescaler for 25k. Have to divide by two since phase correct.
+    OCR1A  = 0;                    // Set initial duty cycle to 0%
+    TCCR1A = _BV(COM1A1) | _BV(WGM11);
+    TCCR1B = _BV(WGM13) | _BV(CS10);
+
+    maxPwmDuty = ICR1;
+    pinMode(9, OUTPUT);
 }
 
 /**
- * @brief Get the current running direction for the motor.
+ * Set the PWM to the given value.
  * 
- * @return Direction of the motor.
+ * @param value - duty cycle. (0 to 1000).
  */
-Direction Nidec24H::getDirection() {
-    return direction;
+void Nidec24H::setPwm(uint16_t value) {
+  //Set the pwm duty cycle for pin 9
+  OCR1A = value;
+}
+
+/**
+ * @brief set whether the motor should be inverted.
+ * 
+ * @param invertDir - true if should be inverted, false otherwise
+ */
+void Nidec24H::invertDirection(bool invertDir) {
+    this->invertDir = invertDir;
+
+    // Update power since may need to invert
+    setPower(power);
 }
 
 /**
  * @brief Run the motor at the given value (reverse is allowed).
  * 
- * @param power - the power level for the motor in the range 255 to -255.
+ * @param power - the power level for the motor in the range 1000 to -1000.
  */
 void Nidec24H::setPower(int power) {
     this->power = power;
@@ -114,17 +108,17 @@ void Nidec24H::setPower(int power) {
     digitalWrite(brakePin, HIGH);
 
     //Get the desired direction.
-    Direction runDirection = (power > 0 ? FORWARD : REVERSE);
+    bool runInReverse = power > 0;
 
-    //Figure out which direction to run 
-    if (runDirection == this->direction) {
-        digitalWrite(dirPin, LOW);
+    // Set the correct direction based on the default
+    if (invertDir == runInReverse) {
+        digitalWrite(dirPin, LOW); // CW
     } else {
-        digitalWrite(dirPin, HIGH);
+        digitalWrite(dirPin, HIGH); // CCW
     }
     
     //set the power.
-    analogWrite(pwmPin, constrain(abs(255 - power), 0, 255));
+    setPwm(maxPwmDuty - constrain(abs(power), 0, maxPwmDuty));
 }
 
 /**
@@ -143,115 +137,6 @@ void Nidec24H::brake() {
     //set to some power
     analogWrite(pwmPin, 50);
 
-    //Turn on the brake
+    //Turn on the brake (active low)
     digitalWrite(brakePin, LOW);
-}
-
-/**
- * @brief Get the current speed the motor is running at in RPMs.
- * 
- * @return the current speed of the motor.
- */
-uint16_t Nidec24H::getSpeed() {
-  if (encoderTimedOut()) {
-    return estimateSpeed();
-  }
-  return speed;
-}
-
-/**
- * @brief Get the filtered current speed the motor is running at in RPMs.
- * 
- * @return the filtered current speed of the motor.
- */
-int Nidec24H::getFilteredSpeed() {
-  //check for timeout
-  if (encoderTimedOut()) {
-    return estimateSpeed();
-  }
-  return filteredSpeed;
-}
-
-/**
- * @brief Check if the encoder has timed out (likely because it has stopped turning).
- * 
- * @return true if encoder has timed out, false otherwise.
- */
-bool Nidec24H::encoderTimedOut() {
-  //Return result if already set
-  if (readTimedOut) {
-    return true;
-  }
-
-  //check if we have timed out (compare to last delta t and check if over 1ms)
-  if ((micros() - fgTime) > (lastInterval * 8) && (micros() - fgTime) > 1000) {
-    readTimedOut = true;
-    return true;
-  }
-
-  //all is good in the hood.
-  return false;
-}
-
-/**
- * @brief Estimate the speed of the motor based on time that has elapsed since last update.
- * 
- * @return the estimated speed in rpm.
- */
- //TODO: might need to add filtering to this
-int Nidec24H::estimateSpeed() {
-  return 1250000ul / (micros() - fgTime);
-}
-
-
-
-/**
-   @brief Called on encoder tick. Update the speed.
-*/
-//TODO: make this calculation dependent on a constant called ticksPerRotation
-//TODO: rewrite this to work with quadrature encoder (to get negative speed values)
-void Nidec24H::updateSpeed() {
-    lastInterval = micros() - fgTime;
-    //1250000ul
-    speed = 1250000ul / lastInterval;
-    fgTime = micros();
-    filteredSpeed = speedFilter.updateEstimate(speed);
-    readTimedOut = false;
-    ticks++;
-}
-
-/**
- * @brief Handle interrupt 0. Forward it to stored instance 0.
- */
-void Nidec24H::isr0() {
-    if (instance0 != nullptr) {
-        instance0->updateSpeed();
-    }
-}
-
-/**
- * @brief Handle interrupt 1. Forward it to stored instance 1.
- */
-void Nidec24H::isr1() {
-    if (instance1 != nullptr) {
-        instance1->updateSpeed();
-    }
-}
-
-/**
- * @brief Handle interrupt 2. Forward it to stored instance 2.
- */
-void Nidec24H::isr2() {
-    if (instance2 != nullptr) {
-        instance2->updateSpeed();
-    }
-}
-
-/**
- * @brief Handle interrupt 3. Forward it to stored instance 3.
- */
-void Nidec24H::isr3() {
-    if (instance3 != nullptr) {
-        instance3->updateSpeed();
-    }
 }
