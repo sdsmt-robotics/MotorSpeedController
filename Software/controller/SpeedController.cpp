@@ -56,13 +56,6 @@ int SpeedController::calcOutput(int curSpeed) {
   //get the error
   error = targetSpeed - curSpeed;
 
-  //Get the integral of the error
-  integral += (float)error * elapsedTime;
-  if (integral < -maxIntegral) {
-    integral = -maxIntegral;
-  } else if (integral > maxIntegral) {
-    integral = maxIntegral;
-  }
 
   //Get the derivative of the error
   derivative = (float)(error - lastError) / elapsedTime;

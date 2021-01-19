@@ -9,8 +9,10 @@
 
 #include "Arduino.h"
 #include "Filter.h"
+#include "PID.h"
 //#include <SimpleKalmanFilter.h>
-                                                 
+
+                                    
 
 class SpeedController {
 public:
@@ -36,6 +38,7 @@ public:
 private:
     Filter outputFilter;  //filter to smooth output values
     //SimpleKalmanFilter outputFilter;
+    PID pid;
 
     int targetSpeed;  //speed we are trying to maintain
 
