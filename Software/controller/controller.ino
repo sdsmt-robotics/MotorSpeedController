@@ -15,8 +15,6 @@
 #include "Nidec24H.h"
 #include "Encoder.h"
 #include "Filter.h"
-#include "SpeedController.h"
-#include "AS5134.h"
 #include <SimpleKalmanFilter.h>
 #include "PID.h"
 
@@ -55,19 +53,12 @@ volatile bool dataReceived = false;
 // Byte transmission timeout in microseconds
 const unsigned long COM_TIMEOUT = 500;
 
-//Create the motor control object
-//Nidec24H(dirPin, brakePin)
-Nidec24H motor(/*MTR_PWM_PIN, */MTR_DIR_PIN, MTR_BRAKE_PIN);
+// Time last update received from the controller
+// TODO: add a timeout?
+unsigned long lastUpdate = 0;
 
-// Create the encoder reader object
-// Encoder(int aPin, int bPin, int ticksPerRotation)
-Encoder encoder(ENC_A_PIN, ENC_B_PIN, 360);
-AS5134 as5134(4, 5, 6);
-//Encoder encoder(2, 3, 4);
-
-//motor speed controller
-float kp = 0.3, ki = 10.0, kd = 0.009;
-SpeedController speedControl;
+// Controller update interval in microseconds
+const unsigned long UPDATE_INTERVAL = 2500;
 
 // Current speed of the motor
 int curSpeed = 0; 
@@ -76,12 +67,18 @@ int curSpeed = 0;
 enum MotorState {SPEED_CONTROL, POWER_CONTROL, BRAKE};
 MotorState motorState = POWER_CONTROL;
 
-// Time last update received from the controller
-// TODO: add a timeout?
-unsigned long lastUpdate = 0;
+//Create the motor control object
+//Nidec24H(dirPin, brakePin)
+Nidec24H motor(/*MTR_PWM_PIN, */MTR_DIR_PIN, MTR_BRAKE_PIN);
 
-// Controller update interval in microseconds
-const unsigned long UPDATE_INTERVAL = 2500;
+// Create the encoder reader object
+// Encoder(int aPin, int bPin, int ticksPerRotation)
+Encoder encoder(ENC_A_PIN, ENC_B_PIN, 360);
+
+//motor speed controller
+float kp = 0.2, ki = 15.0, kd = 0.001, N = 20.0;
+// PID(Kp, Ki, Kd, N, sample_time)
+PID pid(kp, ki, kd, N, UPDATE_INTERVAL);
 
 
 //=====SETUP=========================================================
@@ -97,12 +94,8 @@ void setup() {
   //ki - constant error correction
   //kd - damper
   // TODO: add support for reading and saving these values from EEPROM
-  //setPIDConsts(kp, ki, kd)
-  //speedControl.setPIDConsts(0.08, 1.4, 0.003);  //RS550
-  //speedControl.setPIDConsts(1.6, 10.0, 0.03); //Was working at one point
-  speedControl.setPIDConsts(kp, ki, kd);
-  speedControl.setOutputLimits(-1000, 1000);
-  speedControl.setTarget(0);
+  pid.setLimits(-1000, 1000);
+  pid.setTarget(0);
 
   
   // initialize the motor
@@ -133,7 +126,7 @@ void loop() {
     
     if (motorState == SPEED_CONTROL) {
       //Get the power level from the speed controller
-      int power = speedControl.calcOutput(encoder.getFilteredSpeed());
+      int power = pid.calculatePID(encoder.getFilteredSpeed());
   
       //set the motor power
       motor.setPower(power);
@@ -147,23 +140,7 @@ void loop() {
   //testKnobControl();
   //testChangingPower();
   //testFilter();
-
-  /*byte curspiByteNum = spiByteNum;
-  if ((micros() - lastByteTime > COM_TIMEOUT) && (spiByteNum != 0)) {  //(have to check val before and after since dealing with timer vals takes a while)
-    Serial.print("Reset: ");
-    Serial.println(curspiByteNum);
-    //spiByteNum = 0;
-  }*/
-
-  
-  /*if (newInt) {
-    Serial.print(delta[0]);
-    Serial.print("\t");
-    Serial.print(delta[1]);
-    Serial.print("\t");
-    Serial.println(delta[2]);
-    newInt = false;
-  }*/
+  //testDrivingSpeed();
 }
 
 //=====SPI functions==========================
@@ -222,7 +199,7 @@ ISR (SPI_STC_vect) {
           break;
 
         case GET_TARGET_SPEED:  // Target speed of the motor
-          spiVal = speedControl.getTarget();
+          spiVal = pid.getTarget();
           break;
         
         default: // Just send 0. Garbage request
@@ -262,9 +239,9 @@ void handleReceivedData(byte command, int value) {
       switch (command) {
         case SET_SPEED:  // Set current speed of the motor
           if (motorState != SPEED_CONTROL) { // Do a reset if changing modes so don't jump.
-            speedControl.reset();
+            pid.reset();
           }
-          speedControl.setTarget(value);
+          pid.setTarget(value);
           motorState = SPEED_CONTROL;
           break;
 
@@ -282,7 +259,7 @@ void handleReceivedData(byte command, int value) {
           motor.invertDirection(value);
           encoder.invertDirection(value);
           if (motorState == SPEED_CONTROL) { // Do a reset if in speed control mode so don't jump.
-            speedControl.reset();
+            pid.reset();
           }
         break;
       }
@@ -336,18 +313,6 @@ void testMotorFunctions() {
     delay(3000);
 }
 
-void tickCount() {
-  static long lastPrint = millis();
-  
-  //Output current speed
-  if (millis() - lastPrint > 20) {
-    Serial.println(encoder.tickCount);
-    
-    
-    lastPrint = millis();
-  }
-}
-
 
 /**
  * Control motor speed target using a knob on A5.
@@ -373,24 +338,6 @@ void testKnobPower() {
     
     lastPrint = millis();
   }
-}
-
-/**
- * Run the motor at some constant power level and read the tick frequency.
- */
-void testTickFreq() {
-  const int power = 100; //power level
-  static long lastPrint = millis();
-
-  //Do the calculation just so we get the same amount of lag as normal
-  //speedControl.calcOutput(encoder.getFilteredSpeed());
-
-  //set the motor power
-  motor.setPower(power);
-
-  //motor.ticks = 0;
-  delay(100);
-//  Serial.println(motor.ticks);
 }
 
 
@@ -443,8 +390,7 @@ void testFilter() {
 
   //Get the power level from the speed controller
   if (micros() - lastUpdate > UPDATE_INTERVAL) {
-    speedControl.calcOutput(encoder.estimateSpeed());
-    //as5134Speed = getAs5134Speed();
+    pid.calculatePID(encoder.estimateSpeed());
     lastUpdate = micros();
   }
 
@@ -464,54 +410,6 @@ void testFilter() {
 }
 
 
-int getAs5134Speed() {
-  static unsigned long curTime, lastTime = micros();
-  static int curPos, lastPos = as5134.readMultiTurnAngle();
-  static int curSpeed;
-  static SimpleKalmanFilter speedFilter(150, 150, 0.05);
-
-  //Calculate the speed based on the current position
-  curPos = as5134.readMultiTurnAngle();
-  curTime = micros();
-  curSpeed = long(curPos - lastPos) * 166667 / (curTime - lastTime); //rpm
-  //curSpeed = (curPos - lastPos); //rpm
-  
-  as5134.resetCounter();
-  lastPos = as5134.readMultiTurnAngle();
-  lastTime = micros();
-  
-  return speedFilter.updateEstimate(curSpeed);
-}
-
-/**
- * Run the motor at a set speed using the PID control.
- */
-void testSetSpeed() {
-  static int power = 0; //power level
-  static long lastPrint = millis();
-
-  //set the target speed
-  speedControl.setTarget(400);
-
-  //Get the power level from the speed controller
-  power = speedControl.calcOutput(encoder.getFilteredSpeed());
-
-  //set the motor power
-  motor.setPower(power);
-  
-  //Output current speed
-  if (millis() - lastPrint > 20) {
-    Serial.print(0);
-    Serial.print(",\t");
-    Serial.print(speedControl.getTarget());
-    Serial.print(",\t");
-    Serial.println(encoder.getFilteredSpeed());
-    
-    lastPrint = millis();
-  }
-}
-
-
 /**
  * Control motor speed target using a knob on A5.
  */
@@ -525,7 +423,7 @@ void testKnobControl() {
 
   //Get the power level from the speed controller
   if (micros() - lastUpdate > UPDATE_INTERVAL) {
-    power = speedControl.calcOutput(encoder.estimateSpeed());
+    power = pid.calculatePID(encoder.estimateSpeed());
     lastUpdate = micros();
   }
 
@@ -536,61 +434,19 @@ void testKnobControl() {
   if (millis() - lastPrint > 20) {
     Serial.print(0); //blue
     Serial.print(",\t");
-    Serial.print(speedControl.getTarget()); //red
+    Serial.print(pid.getTarget()); //red
     Serial.print(",\t");
-    Serial.print(speedControl.lastError); //green
-    Serial.print(",\t");
-    Serial.print(speedControl.integral); //orange
-    Serial.print(",\t");
-    Serial.print(speedControl.derivative); //purple
-    Serial.print(",\t");
-    Serial.print(encoder.getFilteredSpeed()); //grey
-    Serial.print(",\t");
-    Serial.println(speedControl.kp * speedControl.lastError + speedControl.ki * speedControl.integral + speedControl.kd * speedControl.derivative); //blue
-    
+    Serial.println(encoder.getFilteredSpeed()); //green
     
     //set the target speed
     int speed = knobFilter.filter((analogRead(KNOB_PIN)-500) * 8);
     if (abs(speed) < 50) speed = 0;
-    speedControl.setTarget(speed);
+    pid.setTarget(speed);
     
     lastPrint = millis();
   }
 }
 
-/**
- * Run the motor at a set speed using the PID control.
- */
-void testOscSpeed() {
-  const int rotation = 30;
-  const float c = rotation * 2 * M_PI / 60000000.0;
-  
-  static int power = 0; //power level
-  
-  static long lastPrint = millis();
-  
-  int driveSpeed = 1000 + 1000 * cos(micros() * c);
-
-  //set the target speed
-  speedControl.setTarget(driveSpeed);
-
-  //Get the power level from the speed controller
-  power = speedControl.calcOutput(encoder.getFilteredSpeed());
-
-  //set the motor power
-  motor.setPower(power);
-  
-  //Output current speed
-  if (millis() - lastPrint > 20) {
-    Serial.print(speedControl.getTarget());
-    Serial.print(",\t");
-    Serial.println(encoder.getFilteredSpeed());
-    
-    lastPrint = millis();
-  }
-  
-    //motor.ticks = 0;
-}
 
 /**
  * Test changing the speed to a new value every three seconds.
@@ -622,10 +478,13 @@ void testChangingSpeed() {
       case 'd':
         kd = val;
       break;
+      case 'n':
+        N = val;
+      break;
       
     }
-    speedControl.setPIDConsts(kp, ki, kd);
-    delay(1000);
+    pid.setPIDConsts(kp, ki, kd, N, UPDATE_INTERVAL);
+    delay(500);
   }
 
   //go to the next speed if past time
@@ -638,11 +497,11 @@ void testChangingSpeed() {
   }
 
   //set the target speed
-  speedControl.setTarget(speeds[speedIndex]);
+  pid.setTarget(speeds[speedIndex]);
 
   //Get the power level from the speed controller
   if (micros() - lastUpdate > UPDATE_INTERVAL) {
-    power = speedControl.calcOutput(encoder.estimateSpeed());
+    power = pid.calculatePID(encoder.estimateSpeed());
     lastUpdate = micros();
   }
 
@@ -651,9 +510,8 @@ void testChangingSpeed() {
   
   //Output current speed
   if (millis() - lastPrint > 20) {
-    Serial.print(speedControl.getTarget());
-    Serial.print(",\t");
-    Serial.print(power);
+    Serial.print("0,\t");
+    Serial.print(pid.Setpoint);
     Serial.print(",\t");
     Serial.println(encoder.getFilteredSpeed());
     
@@ -679,15 +537,15 @@ void testControllerFunctions() {
         Serial.print("Old state: ");
         Serial.print(motorState);
         if (motorState != SPEED_CONTROL) { // Do a reset if changing modes so don't jump.
-          speedControl.reset();
+          pid.reset();
           Serial.print(", reset controller");
         }
-        speedControl.setTarget(val);
+        pid.setTarget(val);
         motorState = SPEED_CONTROL;
         Serial.print(", new state: ");
         Serial.print(motorState);
         Serial.print(", Set speed: ");
-        Serial.println(speedControl.getTarget());
+        Serial.println(pid.getTarget());
         break;
 
       case 'p':  // Set current speed for motor and go into power control mode
@@ -711,7 +569,7 @@ void testControllerFunctions() {
         motor.invertDirection(val);
         encoder.invertDirection(val);
         if (motorState == SPEED_CONTROL) { // Do a reset if in speed control mode so don't jump.
-          speedControl.reset();
+          pid.reset();
         }
         Serial.print("Direction invert: ");
         Serial.println(val == true);
@@ -729,7 +587,7 @@ void testControllerFunctions() {
     
     if (motorState == SPEED_CONTROL) {
       //Get the power level from the speed controller
-      power = speedControl.calcOutput(encoder.getFilteredSpeed());
+      power = pid.calculatePID(encoder.getFilteredSpeed());
   
       //set the motor power
       motor.setPower(power);
@@ -745,53 +603,7 @@ void testControllerFunctions() {
 
 
 /**
- * Test changing the speed to a new value every three seconds and display PID values.
- */
-void testShowPID() {
-  const int speeds[] = {1000, 600, 2000};
-  const int numSpeeds = 3;
-  static int speedIndex = 0;
-  static unsigned long lastSpeedChange = millis();
-  static unsigned long lastPrint = millis();
-  static unsigned long lastUpdate = micros();
-  
-  static int power = 0; //power level
-  
-
-  //go to the next speed if past time
-  if (millis() - lastSpeedChange > 3000) {
-    speedIndex++;
-    lastSpeedChange = millis();
-    if (speedIndex >= numSpeeds) {
-      speedIndex = 0;
-    }
-  }
-
-  //set the target speed
-  speedControl.setTarget(speeds[speedIndex]);
-
-  //Get the power level from the speed controller
-  if (micros() - lastUpdate > UPDATE_INTERVAL) {
-    power = speedControl.calcOutput(encoder.estimateSpeed());
-  }
-
-  //set the motor power
-  motor.setPower(power);
-  
-  //Output current speed
-  if (millis() - lastPrint > 20) {
-    Serial.print(speedControl.lastError);
-    Serial.print(",\t");
-    Serial.print(speedControl.integral);
-    Serial.print(",\t");
-    Serial.println(speedControl.derivative);
-    
-    lastPrint = millis();
-  }
-}
-
-/**
- * Test changing the speed to a new value every three seconds.
+ * Test changing the speed to simulate driving the robot.
  */
 void testDrivingSpeed() {
   const int numSpeeds = 3;
@@ -814,10 +626,10 @@ void testDrivingSpeed() {
   if (micros() - lastUpdate > UPDATE_INTERVAL) {
     // Calculate the speed
     driveSpeed = roatateForSpin + rotateForTranslate * cos(micros() * c);
-    speedControl.setTarget(driveSpeed);
+    pid.setTarget(driveSpeed);
     
     //set the motor power
-    power = speedControl.calcOutput(encoder.estimateSpeed());
+    power = pid.calculatePID(encoder.estimateSpeed());
     motor.setPower(power);
 
     lastUpdate = micros();
@@ -836,52 +648,5 @@ void testDrivingSpeed() {
   }
   
     //motor.ticks = 0;
-}
-
-/**
- * Control motor using commands sent from the serial console.
- * 
- * Space: toggle motor on/off
- * number: set the motor to that speed
- */
-void testSpeedControls() {
-  static bool motorRunning = true;
-  static int power = 0; //power level
-  
-  static long lastPrint = millis();
-
-  
-  //Read user input if available
-  if (Serial.available()) {
-    //If space, toggle motor
-    if (Serial.peek() == ' ') {
-      motorRunning = !motorRunning;
-      while (Serial.available()) {
-        Serial.read();
-      }
-    } else {
-      //read the new speed value
-      motorRunning = true;
-      speedControl.setTarget(Serial.parseInt());
-    }
-  }
-
-  
-  //update the motor
-  if (motorRunning) {
-    power = speedControl.calcOutput(encoder.getFilteredSpeed());
-    motor.setPower(power);
-  } else {
-    motor.setPower(0);
-  }
-  
-  //Output current speed
-  if (millis() - lastPrint > 20) {
-    Serial.print(speedControl.getTarget());
-    Serial.print(",\t");
-    Serial.println(encoder.getFilteredSpeed());
-    
-    lastPrint = millis();
-  }
 }
 #endif

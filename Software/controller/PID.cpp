@@ -5,41 +5,27 @@
 PID::PID(double Kp,double Ki, double Kd, double N, 
         unsigned long sample_time)
 {
-
-    this -> Kd = Kd;
-    this -> Kp = Kp;
-    this -> Kd = Ki;
-    this -> N  = N;
-    this -> Ts = sample_time;
-
-    calculateCoeffs();
-    Insatance = this;
+    setPIDConsts(Kp, Ki, Kd, N, sample_time);
 }
 
-void PID::setPIDConsts(double Kp,double Ki, double Kd, double N, 
-        unsigned long sample_time)
-    {
-            
+void PID::setPIDConsts(double Kp,double Ki, double Kd, double N, unsigned long sample_time)
+{
     this -> Kd = Kd;
     this -> Kp = Kp;
-    this -> Kd = Ki;
+    this -> Ki = Ki;
     this -> N  = N;
-    this -> Ts = sample_time;
+    this -> Ts = sample_time/1000000.0;
     calculateCoeffs();
-    }
+}
 
 void PID::calculateCoeffs()
 {
     a0 = (1+ N * Ts);
-
     a1 = - (2 + N * Ts);
-
     a2 = 1;
 
-    b0 = Kp * (1+N*Ts) + Ki * Ts * (1 + N * Ts)
-                + Kd * N;
+    b0 = Kp * (1+N*Ts) + Ki * Ts * (1 + N * Ts) + Kd * N;
     b1 = -( Kp * ( 2 + N * Ts ) + Ki * Ts + 2 * Kd * N );
-
     b2 = Kp + Kd*N;
 
     ku1 = a1/a0;
@@ -50,7 +36,7 @@ void PID::calculateCoeffs()
     ke2 = b2/a0;
 }
 
-double PID::calculatePID( double Input)
+double PID::calculatePID(double Input)
 {
     this->Input = Input;
     /* If over riding this function, add output code here */
@@ -59,22 +45,31 @@ double PID::calculatePID( double Input)
     e2 = e1;
     e1 = e0;
     u2 = u1;
-    u0_part = -ku1 * u1 + ku2 * u2 + ke1 * e1 + ke2 * e2;
+    u1 = u0;
+    u0_part = -ku1 * u1 - ku2 * u2 + ke1 * e1 + ke2 * e2;
 
     /* If over riding this function, Move all lines below to start of function */
     e0 = Setpoint - Input;
 
-    PID_output = u0_part + ke0 * e0;
+    u0 = u0_part + ke0 * e0;
+
+    PID_output = u0;
     
-    ScaledPIDOutput = (PID_output > max ? max : PID_output);
-    ScaledPIDOutput = (PID_output < min ? min : PID_output);
+    // Constrain the output
+    if (PID_output > max) {
+        ScaledPIDOutput = max;
+    } else if (PID_output < min) {
+        ScaledPIDOutput = min;
+    } else {
+        ScaledPIDOutput = PID_output;
+    }
 
     return ScaledPIDOutput;
 
 
 }
 
-void PID::setLimits(uint16_t min,uint16_t max)
+void PID::setLimits(int16_t min, int16_t max)
 {
     this->min = min;
     this->max = max;
@@ -84,7 +79,11 @@ void PID::setTarget(double target) {
   this->Setpoint = target;
 }
 
-void PID::resetPID()
+double PID::getTarget() {
+  return Setpoint;
+}
+
+void PID::reset()
 {
     e0 = 0;
     e1 = 0;
@@ -93,6 +92,7 @@ void PID::resetPID()
     u0_part = 0;
     PID_output = 0;
     ScaledPIDOutput = 0;
+    u0 = 0;
     u1 = 0;
     u2 = 0;
 
