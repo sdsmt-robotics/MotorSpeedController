@@ -1,4 +1,5 @@
 {
-    "board": "arduino:avr:uno",
-    "sketch": "controller\\controller.ino"
+    "board": "arduino:avr:mega",
+    "sketch": "controller\\controller.ino",
+    "configuration": "cpu=atmega2560"
 }
