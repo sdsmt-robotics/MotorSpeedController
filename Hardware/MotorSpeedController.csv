@@ -1,46 +1,15 @@
-"Source:","E:\Projects\MotorSpeedController\MotorSpeedController.sch"
-"Date:","1/15/2021 10:48:56 AM"
-"Tool:","Eeschema (5.1.6)-1"
-"Generator:","C:\Program Files\KiCad\bin\scripting\plugins/bom_csv_grouped_by_value.py"
-"Component Count:","19"
-
-"Individual Components:"
-
-"Item","Qty","Reference(s)","Value","LibPart","Footprint","Datasheet","Digikey"
-"","","C1","1uF","Device:C_Small","Capacitor_SMD:C_0603_1608Metric","~","587-6280-1-ND‎"
-"","","C2","22pF","Device:C_Small","Capacitor_SMD:C_0603_1608Metric","~","478-0603YA220KAT2ACT-ND‎"
-"","","C3","0.1uF","Device:C_Small","Capacitor_SMD:C_0603_1608Metric","~","1276-1941-1-ND"
-"","","C4","22pF","Device:C_Small","Capacitor_SMD:C_0603_1608Metric","~","478-0603YA220KAT2ACT-ND‎"
-"","","C5","0.1uF","Device:C_Small","Capacitor_SMD:C_0603_1608Metric","~","1276-1941-1-ND"
-"","","D1","LED_Small_ALT","Device:LED_Small_ALT","Diode_SMD:D_0603_1608Metric_Castellated","~","160-1183-1-ND"
-"","","D2","LED_Small_ALT","Device:LED_Small_ALT","Diode_SMD:D_0603_1608Metric_Castellated","~","160-1182-1-ND‎"
-"","","H1","MountingHole_Pad","Mechanical:MountingHole_Pad","MountingHole:MountingHole_3mm_Pad_Via","~",""
-"","","H2","MountingHole_Pad","Mechanical:MountingHole_Pad","MountingHole:MountingHole_3mm_Pad_Via","~",""
-"","","H3","MountingHole_Pad","Mechanical:MountingHole_Pad","MountingHole:MountingHole_3mm_Pad_Via","~",""
-"","","H4","MountingHole_Pad","Mechanical:MountingHole_Pad","MountingHole:MountingHole_3mm_Pad_Via","~",""
-"","","J1","Conn_01x08_Female","Connector:Conn_01x08_Female","Connector_PinHeader_1.27mm:PinHeader_1x08_P1.27mm_Vertical","~",""
-"","","J2","Conn_01x04_Female","Connector:Conn_01x04_Female","Connector_PinHeader_1.27mm:PinHeader_1x04_P1.27mm_Vertical","~",""
-"","","R1","1k","Device:R_Small","Resistor_SMD:R_0603_1608Metric","~","P124100CT-ND‎"
-"","","R2","10k","Device:R_Small","Resistor_SMD:R_0603_1608Metric","~","P124100CT-ND‎"
-"","","R3","10k","Device:R_Small","Resistor_SMD:R_0603_1608Metric","~","P124100CT-ND‎"
-"","","U1","ATmega328P-AU","MotorController:ATmega328P-AU","Package_QFP:TQFP-32_7x7mm_P0.8mm","",""
-"","","U2","AS5134","MotorController:AS5134","MotorSpeedController:SOIC-20","","AS5134-ZSSMCT-ND‎"
-"","","Y1","16MHz","Device:Crystal_GND24_Small","Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm","~","2151-RH100-16.000-12-1010-EXT-TRCT-ND"
-
-
-
-"Collated Components:"
-
-"Item","Qty","Reference(s)","Value","LibPart","Footprint","Datasheet","Digikey"
-"1","1","C1","1uF","Device:C_Small","Capacitor_SMD:C_0603_1608Metric","~","587-6280-1-ND‎"
-"2","2","C2, C4","22pF","Device:C_Small","Capacitor_SMD:C_0603_1608Metric","~","478-0603YA220KAT2ACT-ND‎"
-"3","2","C3, C5","0.1uF","Device:C_Small","Capacitor_SMD:C_0603_1608Metric","~","1276-1941-1-ND"
-"4","2","D1, D2","LED_Small_ALT","Device:LED_Small_ALT","Diode_SMD:D_0603_1608Metric_Castellated","~","160-1183-1-ND"
-"5","4","H1, H2, H3, H4","MountingHole_Pad","Mechanical:MountingHole_Pad","MountingHole:MountingHole_3mm_Pad_Via","~",""
-"6","1","J1","Conn_01x08_Female","Connector:Conn_01x08_Female","Connector_PinHeader_1.27mm:PinHeader_1x08_P1.27mm_Vertical","~",""
-"7","1","J2","Conn_01x04_Female","Connector:Conn_01x04_Female","Connector_PinHeader_1.27mm:PinHeader_1x04_P1.27mm_Vertical","~",""
-"8","1","R1","1k","Device:R_Small","Resistor_SMD:R_0603_1608Metric","~","P124100CT-ND‎"
-"9","2","R2, R3","10k","Device:R_Small","Resistor_SMD:R_0603_1608Metric","~","P124100CT-ND‎"
-"10","1","U1","ATmega328P-AU","MotorController:ATmega328P-AU","Package_QFP:TQFP-32_7x7mm_P0.8mm","",""
-"11","1","U2","AS5134","MotorController:AS5134","MotorSpeedController:SOIC-20","","AS5134-ZSSMCT-ND‎"
-"12","1","Y1","16MHz","Device:Crystal_GND24_Small","Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm","~","2151-RH100-16.000-12-1010-EXT-TRCT-ND"
+Item,Qty,Reference(s),Value,LibPart,Footprint,Datasheet,Digikey,
+1,2,"C1, C9",1uF,Device:C_Small,Capacitor_SMD:C_0603_1608Metric,~,587-6280-1-ND,
+2,2,"C2, C4",22pF,Device:C_Small,Capacitor_SMD:C_0603_1608Metric,~,478-0603YA220KAT2ACT-ND,
+3,5,"C3, C5, C6, C7, C8",0.1uF,Device:C_Small,Capacitor_SMD:C_0603_1608Metric,~,1276-1941-1-ND,
+4,2,"D1, D2",LED_Small_ALT,Device:LED_Small_ALT,Diode_SMD:D_0603_1608Metric_Castellated,~,160-1183-1-ND,
+5,1,D3,D_Small,Device:D_Small,Diode_SMD:D_2010_5025Metric_Castellated,~,478-7812-1-ND,DNP
+6,3,"H1, H2, H3",MountingHole_Pad,Mechanical:MountingHole_Pad,MountingHole:MountingHole_3mm_Pad_Via,~,,DNP
+7,1,J1,Conn_01x08_Female,Connector:Conn_01x08_Female,Connector_PinHeader_2.54mm:PinHeader_1x08_P2.54mm_Vertical,~,,DNP
+8,1,J2,Conn_01x05_Female,Connector:Conn_01x05_Female,Connector_PinHeader_2.54mm:PinHeader_1x05_P2.54mm_Vertical,~,,DNP
+9,1,R1,1k,Device:R_Small,Resistor_SMD:R_0603_1608Metric,~,P124100CT-ND,
+10,2,"R2, R3",10k,Device:R_Small,Resistor_SMD:R_0603_1608Metric,~,P124100CT-ND,
+11,1,U1,ATmega328P-AU,MotorController:ATmega328P-AU,Package_QFP:TQFP-32_7x7mm_P0.8mm,,,
+12,1,U2,AS5134,MotorController:AS5134,MotorSpeedController:SOIC-20,,AS5134-ZSSMCT-ND,
+13,1,U3,MC7805,MotorController:MC7805,Package_TO_SOT_SMD:TO-252-2,,MC7805CDTRKGOSCT-ND,
+14,1,Y1,16MHz,Device:Crystal_GND24_Small,Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm,~,2151-RH100-16.000-12-1010-EXT-TRCT-ND,
