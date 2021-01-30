@@ -76,9 +76,11 @@ Nidec24H motor(/*MTR_PWM_PIN, */MTR_DIR_PIN, MTR_BRAKE_PIN);
 Encoder encoder(ENC_A_PIN, ENC_B_PIN, 360);
 
 //motor speed controller
-float kp = 0.2, ki = 15.0, kd = 0.001, N = 20.0;
+//float kp = 0.2, ki = 15.0, kd = 0.001, N = 20.0;
+float kp = 5, ki = 7, kd = 0.5 , N = 10;
 // PID(Kp, Ki, Kd, N, sample_time)
 PID pid(kp, ki, kd, N, UPDATE_INTERVAL);
+double setpoint = 1;
 
 
 //=====SETUP=========================================================
@@ -95,7 +97,7 @@ void setup() {
   //kd - damper
   // TODO: add support for reading and saving these values from EEPROM
   pid.setLimits(-1000, 1000);
-  pid.setTarget(0);
+  pid.setTarget(setpoint);
 
   
   // initialize the motor
@@ -121,7 +123,7 @@ void loop() {
   }
   
   // Control the motor
-  if (micros() - lastUpdate > UPDATE_INTERVAL) {
+  /*if (micros() - lastUpdate > UPDATE_INTERVAL) {
     encoder.estimateSpeed();
     
     if (motorState == SPEED_CONTROL) {
@@ -133,14 +135,17 @@ void loop() {
     }
     
     lastUpdate = micros();
-  }
+  }*/
+
+  #if TESTING
   //testControllerFunctions();
   //testKnobPower();
-  //testChangingSpeed();
+  testChangingSpeed();
   //testKnobControl();
   //testChangingPower();
   //testFilter();
   //testDrivingSpeed();
+  #endif 
 }
 
 //=====SPI functions==========================
@@ -345,7 +350,7 @@ void testKnobPower() {
  * Test changing the speed to a new value every three seconds.
  */
 void testChangingPower() {
-  const int speeds[] = {500, 120, 800, 300};
+  const int speeds[] = {0,500,500,500};
   const int numSpeeds = 4;
   static int speedIndex = 0;
   static unsigned long lastSpeedChange = millis();
@@ -355,7 +360,7 @@ void testChangingPower() {
   static int power = 0; //power level
 
   //go to the next speed if past time
-  if (millis() - lastSpeedChange > 3000) {
+  if (millis() - lastSpeedChange > 1000) {
     speedIndex++;
     lastSpeedChange = millis();
     if (speedIndex >= numSpeeds) {
@@ -452,7 +457,7 @@ void testKnobControl() {
  * Test changing the speed to a new value every three seconds.
  */
 void testChangingSpeed() {
-  const int speeds[] = {900, 500, 1600, 400};
+  const int speeds[] = {0,500,800,200};
   const int numSpeeds = 4;
   static int speedIndex = 0;
   static unsigned long lastSpeedChange = millis();
@@ -488,7 +493,7 @@ void testChangingSpeed() {
   }
 
   //go to the next speed if past time
-  if (millis() - lastSpeedChange > 3000) {
+  if (millis() - lastSpeedChange > 2000) {
     speedIndex++;
     lastSpeedChange = millis();
     if (speedIndex >= numSpeeds) {
