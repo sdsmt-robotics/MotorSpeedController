@@ -6,7 +6,6 @@
 #define ENCODER_H
 
 #include "Arduino.h"
-#include "AS5134.h"
 #include <SimpleKalmanFilter.h>
 
 class Encoder {
