@@ -20,7 +20,7 @@ void setup (void) {
 
   // Initialize the SPI communications
   SPI.begin ();
-  SPI.setClockDivider(SPI_CLOCK_DIV4);
+  SPI.setClockDivider(SPI_CLOCK_DIV32);
 
   // Initialize the motor control
   motor.init();
@@ -50,6 +50,7 @@ void loop (void) {
   
   //Output current speed
   if (millis() - lastPrint > 20) {
+    Serial.print("0,\t");
     Serial.print(speeds[speedIndex]);
     Serial.print(",\t");
     Serial.println(motor.getSpeed());

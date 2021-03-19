@@ -37,6 +37,7 @@ Nidec24hController::Nidec24hController(SPIClass &spi, int ssPin) : spi(spi), ssP
  * Initialize the class.
  */
 void Nidec24hController::init() {
+  pinMode(ssPin, OUTPUT);  // Shouldn't have to do this, but some devices need it
   digitalWrite(SS, HIGH);  // ensure SS stays high for now
   digitalWrite(ssPin, HIGH);
 
@@ -113,7 +114,7 @@ int Nidec24hController::getTargetSpeed() {
  * @param command - action to perform.
  * @param value - corresponding value for the action.
  */
-void Nidec24hController::sendVal(int command, int value) {
+void Nidec24hController::sendVal(uint8_t command, int value) {
   communicate(command, value);
 }
 
@@ -123,7 +124,7 @@ void Nidec24hController::sendVal(int command, int value) {
  * @param command - tell device which value to get.
  * @return the value returned from the device.
  */
-int Nidec24hController::getVal(int command) {
+int Nidec24hController::getVal(uint8_t command) {
   return communicate(command, 0);
 }
 
@@ -135,26 +136,31 @@ int Nidec24hController::getVal(int command) {
  * @param sendVal - corresponding value for the action.
  * @return the value returned from the device.
  */
-int Nidec24hController::communicate(int command, int sendVal) {
-  byte readVal[2];
-  static unsigned long startTime;
+int Nidec24hController::communicate(uint8_t command, int sendVal) {
+  union { int16_t val; struct { uint8_t lsb; uint8_t msb; }; } in, out;
+  
+  out.val = sendVal;
 
+  noInterrupts();
   // Select the chip to control
   digitalWrite(ssPin, LOW);
+  delayMicroseconds (TRANSFER_BYTE_DELAY/2);
   
   // Send the initial command
-  spi.transfer(command);
+  spi.transfer(command); // Takes ~20us with 32 clock div
   delayMicroseconds(TRANSFER_BYTE_DELAY);
 
   // Send the value and (or) read the response
-  readVal[0] = spi.transfer(sendVal & 0xFF);
-  delayMicroseconds(TRANSFER_BYTE_DELAY);
-  readVal[1] = spi.transfer(sendVal >> 8);
+  in.lsb = spi.transfer(out.lsb);
+  delayMicroseconds(TRANSFER_BYTE_DELAY/2);
+  in.msb = spi.transfer(out.msb);
   
   // Done controlling
+  delayMicroseconds(TRANSFER_BYTE_DELAY/2);
   digitalWrite(ssPin, HIGH);
-  delayMicroseconds (TRANSFER_BYTE_DELAY);
+  delayMicroseconds(TRANSFER_BYTE_DELAY/2);
+  interrupts();
 
   // Turn the two values into a 16-bit value
-  return (readVal[1] << 8) | readVal[0];
+  return in.val;
 }

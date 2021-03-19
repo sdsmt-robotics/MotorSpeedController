@@ -25,7 +25,7 @@ void setup (void) {
 
   // Initialize the SPI communications
   SPI.begin ();
-  SPI.setClockDivider(SPI_CLOCK_DIV4);
+  SPI.setClockDivider(SPI_CLOCK_DIV32);
 
   // Initialize the motor control
   motor.init();
@@ -91,8 +91,8 @@ void loop (void)
 
 //=====UTILITY funcitons=========================
 void printMenu() {
-  Serial.println("1 - Set Speed");
-  Serial.println("2 - Set Power");
+  Serial.println("1 - Set Speed (rpm)");
+  Serial.println("2 - Set Power (-1000 to 1000)");
   Serial.println("3 - Brake");
   Serial.println("4 - Set Direction Inverted");
   Serial.println("5 - Get Speed");

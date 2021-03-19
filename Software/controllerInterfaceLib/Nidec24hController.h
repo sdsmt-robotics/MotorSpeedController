@@ -27,11 +27,11 @@ private:
     SPIClass &spi;
     int ssPin;
 
-    const int TRANSFER_BYTE_DELAY = 50;
+    const int TRANSFER_BYTE_DELAY = 80;
 
-    int getVal(int command);
-    void sendVal(int command, int value);
-    int communicate(int command, int sendVal);
+    int getVal(uint8_t command);
+    void sendVal(uint8_t command, int value);
+    int communicate(uint8_t command, int sendVal);
     
 };
 

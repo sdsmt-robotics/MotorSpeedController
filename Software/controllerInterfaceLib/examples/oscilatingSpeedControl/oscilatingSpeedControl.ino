@@ -22,11 +22,13 @@ void setup (void) {
   Serial.begin (115200);
 
   // Initialize the SPI communications
-  SPI.begin ();
-  SPI.setClockDivider(SPI_CLOCK_DIV4);
+  SPI.begin();
+  SPI.setClockDivider(SPI_CLOCK_DIV32);
 
   // Initialize the motor control
   motor.init();
+
+  Serial.println("Begin Oscilating Control");
 }
 
 //===LOOP=============================
@@ -48,21 +50,36 @@ void loop (void) {
   // Get the power level from the speed controller
   if (micros() - lastUpdate > UPDATE_INTERVAL) {
     // Calculate the speed
-    driveSpeed = roatateForSpin + rotateForTranslate * cos(micros() * frequency);
-    motor.setSpeed(driveSpeed);
+    //driveSpeed = roatateForSpin + rotateForTranslate * cos(micros() * frequency);
+
+    //driveSpeed = driveSpeed >> 2;
+    driveSpeed++;
+    if (driveSpeed > 1000) driveSpeed = 50;
+    motor.setPower(driveSpeed);
+    delayMicroseconds(200);
+    int setPower = motor.getPower();
+    
+    if (setPower != driveSpeed) {
+      Serial.print(driveSpeed);
+      Serial.print(" -> ");
+      Serial.println(setPower);
+    }
 
     lastUpdate = micros();
   }
 
+  // Try reducing delays
+  // Upload new code and test other motors
+
   
   //Output current speed
-  if (millis() - lastPrint > 10) {
+  /*if (millis() - lastPrint > 10) {
     Serial.print(driveSpeed);
     Serial.print(",\t");
-    Serial.print(motor.getSpeed());
+    Serial.print(motor.getTargetSpeed());
     Serial.print(",\t");
     Serial.println(0);
     
     lastPrint = millis();
-  }
+  }*/
 }  // end of loop
