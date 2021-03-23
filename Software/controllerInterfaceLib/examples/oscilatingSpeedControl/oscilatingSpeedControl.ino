@@ -34,8 +34,8 @@ void setup (void) {
 //===LOOP=============================
 void loop (void) {
   // How the robot is driving
-  const int rotation = 400;   // chassis rotation (rpm)
-  const int translation = 2;  // Driving feet per sec
+  const int rotation = 500;   // chassis rotation (rpm)
+  const int translation = 1;  // Driving feet per sec
 
   // Calculate the components of motor rotation for the translating and chassis rotation
   const float roatateForSpin = rotation * 4.0;  // Componenent of motor speed for chassis rotation
@@ -43,6 +43,7 @@ void loop (void) {
   const int rotateForTranslate = translation * 97.021;  //amount of rotation needed to get the translation speed
   
   static int driveSpeed = 0;  // Current set speed
+  static int curSpeed = 0;  // Current actual speed
   static unsigned long lastPrint = millis();
   static unsigned long lastUpdate = micros();
 
@@ -50,36 +51,23 @@ void loop (void) {
   // Get the power level from the speed controller
   if (micros() - lastUpdate > UPDATE_INTERVAL) {
     // Calculate the speed
-    //driveSpeed = roatateForSpin + rotateForTranslate * cos(micros() * frequency);
+    driveSpeed = roatateForSpin + rotateForTranslate * cos(micros() * frequency);
 
-    //driveSpeed = driveSpeed >> 2;
-    driveSpeed++;
-    if (driveSpeed > 1000) driveSpeed = 50;
-    motor.setPower(driveSpeed);
+    motor.setSpeed(driveSpeed);
     delayMicroseconds(200);
-    int setPower = motor.getPower();
+    curSpeed = motor.getSpeed();
     
-    if (setPower != driveSpeed) {
-      Serial.print(driveSpeed);
-      Serial.print(" -> ");
-      Serial.println(setPower);
-    }
-
     lastUpdate = micros();
   }
-
-  // Try reducing delays
-  // Upload new code and test other motors
-
   
   //Output current speed
-  /*if (millis() - lastPrint > 10) {
+  if (millis() - lastPrint > 10) {
+    Serial.print(0);
+    Serial.print("\t");
     Serial.print(driveSpeed);
-    Serial.print(",\t");
-    Serial.print(motor.getTargetSpeed());
-    Serial.print(",\t");
-    Serial.println(0);
+    Serial.print("\t");
+    Serial.println(curSpeed);
     
     lastPrint = millis();
-  }*/
+  }
 }  // end of loop
