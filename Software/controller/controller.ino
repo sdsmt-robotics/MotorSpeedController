@@ -25,9 +25,9 @@
 
 #include "Nidec24H.h"
 #include "Encoder.h"
-#include "Filter.h"
 #include "PID.h"
 #include <SimpleKalmanFilter.h>  // https://github.com/denyssene/SimpleKalmanFilter
+#include <stdint.h>
 
 // Define the pins
 #define LED_PIN A0
@@ -130,7 +130,7 @@ void loop() {
       
       if (motorState == SPEED_CONTROL) {
         //Get the power level from the speed controller
-        int power = pid.calculatePID(encoder.getFilteredSpeed());
+        int power = pid.calculateOutput(encoder.getFilteredSpeed());
     
         //set the motor power
         motor.setPower(power);
