@@ -1,105 +1,184 @@
 #include "PID.h"
 #include <avr/io.h>
 
-
-PID::PID(double Kp,double Ki, double Kd, double N, 
+/**
+* @brief Description:
+* Constructor for the PID class.
+*
+* @param Kp - double: The proportional magnitude term of the PID loop.
+* @param Ki - double: The integral magnitude term of the PID loop.
+* @param Kd - double: The derivative magnitude term of the PID loop.
+* @param N - double: The low pass filter magnitude.
+* @param sample_time - unsigned long: The sample time.
+*
+* @return none.
+*/
+PID::PID(double Kp, double Ki, double Kd, double N,
         unsigned long sample_time)
 {
     setPIDConsts(Kp, Ki, Kd, N, sample_time);
+    reset();
 }
 
-void PID::setPIDConsts(double Kp,double Ki, double Kd, double N, unsigned long sample_time)
+/**
+* @brief Description:
+* Sets new PID constants.
+*
+* @param Kp - double: The proportional magnitude term of the PID loop.
+* @param Ki - double: The integral magnitude term of the PID loop.
+* @param Kd - double: The derivative magnitude term of the PID loop.
+* @param N - double: The low pass filter magnitude.
+* @param sample_time - unsigned long: The sample time.
+*
+* @return none.
+*/
+void PID::setPIDConsts(double Kp, double Ki, double Kd, double N,
+        unsigned long sample_time)
 {
-    this -> Kd = Kd;
-    this -> Kp = Kp;
-    this -> Ki = Ki;
-    this -> N  = N;
-    this -> Ts = sample_time/1000000.0;
+    this->Kd = Kd;
+    this->Kp = Kp;
+    this->Ki = Ki;
+    this->N = N;
+    this->Ts = sample_time / 1000000.0;
     calculateCoeffs();
+
+    return;
 }
 
-void PID::calculateCoeffs()
+/**
+* @brief Description:
+* Recalculate the PID coefficients for the calculations.
+*
+* @return none.
+*/
+void PID::calculateCoeffs() 
+//https://www.scilab.org/discrete-time-pid-controller-implementation
 {
-    a0 = (1+ N * Ts);
-    a1 = - (2 + N * Ts);
+    //intimidate calculations
+    a0 = (1 + N * Ts);
+    a1 = -(2 + N * Ts);
     a2 = 1;
 
-    b0 = Kp * (1+N*Ts) + Ki * Ts * (1 + N * Ts) + Kd * N;
-    b1 = -( Kp * ( 2 + N * Ts ) + Ki * Ts + 2 * Kd * N );
-    b2 = Kp + Kd*N;
+    b0 = Kp * (1 + N * Ts) + Ki * Ts * (1 + N * Ts) + Kd * N;
+    b1 = -(Kp * (2 + N * Ts) + Ki * Ts + 2 * Kd * N);
+    b2 = Kp + Kd * N;
 
-    ku1 = a1/a0;
-    ku2 = a2/a0;
+    //useful values
+    derivitve_feedback_multiplayer = a1 / a0;        //(Ku1)
+    second_derivitve_feedback_multiplayer = a2 / a0; //(Ku2)
 
-    ke0 = b0/a0;
-    ke1 = b1/a0;
-    ke2 = b2/a0;
+    input_multiplayer = b0 / a0;                  //(Ke0)
+    derivitve_input_multiplayer = b1 / a0;        //(Ke1)
+    second_derivitve_input_multiplayer = b2 / a0; //(Ke2)
+
+    return;
 }
 
+/**
+* @brief Description:
+* Update PID calculations and get a new PID output.
+*
+* @param Input - double: The input of the PID calculation.
+*
+* @return double: PID output.
+*/
 double PID::calculatePID(double Input)
 {
-    this->Input = Input;
-    /* If over riding this function, add output code here */
 
+    //update for the last three inputs
+    last_error = previous_error;
+    previous_error = current_error;
+    current_error = Setpoint - Input;
 
-    e2 = e1;
-    e1 = e0;
-    u2 = u1;
-    u1 = u0;
-    u0_part = -ku1 * u1 - ku2 * u2 + ke1 * e1 + ke2 * e2;
+    last_power = previous_power;
+    previous_power = current_power;
 
-    /* If over riding this function, Move all lines below to start of function */
-    e0 = Setpoint - Input;
+    //calculate the new value
+    current_power =
+        - derivitve_feedback_multiplayer * previous_power 
+        - second_derivitve_feedback_multiplayer * last_power 
+        + input_multiplayer * current_error 
+        + derivitve_input_multiplayer * previous_error 
+        + second_derivitve_input_multiplayer * last_error;
 
-    u0 = u0_part + ke0 * e0;
-
-    PID_output = u0;
-    
     // Constrain the output
-    if (PID_output > max) {
+    if (current_power > max)
+    {
         ScaledPIDOutput = max;
-    } else if (PID_output < min) {
+    }
+    else if (current_power < min)
+    {
         ScaledPIDOutput = min;
-    } else {
-        ScaledPIDOutput = PID_output;
+    }
+    else
+    {
+        ScaledPIDOutput = current_power;
     }
 
     return ScaledPIDOutput;
-
-
 }
 
+/**
+* @brief Description:
+* Sets the limits for the PID output.
+*
+* @param min - int16_t: The min value for the PID output.
+* @param max - int16_t: The max value for the PID output.
+*
+* @return none.
+*/
 void PID::setLimits(int16_t min, int16_t max)
 {
     this->min = min;
     this->max = max;
+
+    return;
 }
 
-void PID::setTarget(double target) {
-  this->Setpoint = target;
+/**
+* @brief Description:
+* Sets the limits for the PID output.
+*
+* @param target - double: Set the PID target.
+*
+* @return none.
+*/
+void PID::setTarget(double target)
+{
+    this->Setpoint = target;
+
+    return;
 }
 
-double PID::getTarget() {
-  return Setpoint;
+/**
+* @brief Description:
+* Gets the current setpoint.
+*
+* @return double: The current PID setpoint.
+*/
+double PID::getTarget()
+{
+    return Setpoint;
 }
 
+/**
+* @brief Description:
+* Resets all PID values for 
+*
+* @return none.
+*/
 void PID::reset()
 {
-    e0 = 0;
-    e1 = 0;
-    e2 = 0;
+    //set all values to zero
+    current_error = 0;
+    previous_error = 0;
+    last_error = 0;
 
-    u0_part = 0;
-    PID_output = 0;
     ScaledPIDOutput = 0;
-    u0 = 0;
-    u1 = 0;
-    u2 = 0;
 
+    current_power = 0;
+    previous_power = 0;
+    last_power = 0;
+
+    return;
 }
-/*
-ISR(TIMER1_COMPA_vect)
-{
-    Instance->calculatePID();
-}
-*/

@@ -1,50 +1,55 @@
 #ifndef PID_H
 #define PID_H
 
-#include<stdint.h>
+#include <stdint.h>
 
 class PID
 {
-    public:
+public:
+    PID(double Kp, double Ki, double Kd, double N, 
+                        unsigned long sample_time); //constructor
+    double calculatePID(double Input);              //calculate PID values
+    void setPIDConsts(double Kp, double Ki, double Kd, double N,
+                      unsigned long sample_time); //set the PID values
+    void setLimits(int16_t min, int16_t max);     //set the power output limits
+    void setTarget(double target);                //set the target value
+    double getTarget();                           //get the set target
+    void reset();                                 //reset all stored values
 
-        PID(double Kp,double Ki, double Kd, double N, unsigned long sample_time);
+private:
+    //sample time
+    double Ts = 2500 / 1000000.0; // Sample time in seconds
 
-        double ScaledPIDOutput;
-        double Input;
-        double Setpoint;
+    //transfer function constants
+    double a0, a1, a2, b0, b1, b2;
 
-        double calculatePID(double Input);
+    //error values over the past three loops
+    double last_error, previous_error, current_error;
 
-        void setPIDConsts(double Kp,double Ki, double Kd, double N, 
-        unsigned long sample_time);
-        void setLimits(int16_t min, int16_t max);
-        void setTarget(double target);
-        double getTarget();
-        void reset();
+    //result values over the past three loops
+    double last_power, previous_power, current_power;
 
-    private:
-        double Ts = 2500/1000000.0; // Sample time in seconds
-        double a0, a1, a2, b0, b1, b2; // Need to define transfer function coefficients
-        double e2,e1,e0,u2,u1,u0,u0_part;
-        double ku1,ku2,ke0,ke1,ke2;
+    //constants based on PID values and time step
+    double derivitve_feedback_multiplayer, 
+                        second_derivitve_feedback_multiplayer;
+    double input_multiplayer, derivitve_input_multiplayer, 
+                        second_derivitve_input_multiplayer;
 
+    //default values
+    int16_t min = 0;
+    int16_t max = 100;
 
-        int16_t min = 0;
-        int16_t max = 100;
+    double Kp = 10;
+    double Ki = 1;
+    double Kd = 1;
+    double N = 20;
 
-        double Kp = 10;
-        double Ki = 1;
-        double Kd = 1;
-        double N = 20;
+    //recalculate the coefficients
+    void calculateCoeffs();
 
-        double PID_output;
-
-
-
-        void calculateCoeffs();
-        
-
+    //main values
+    double ScaledPIDOutput;
+    double Setpoint;
 };
-
 
 #endif

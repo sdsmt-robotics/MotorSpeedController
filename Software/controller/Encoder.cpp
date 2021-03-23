@@ -16,6 +16,8 @@
 
 // for use by ISR routine
 Encoder * Encoder::instance;
+
+
 /**
  * @brief Constructor for the class.
  * 
@@ -37,8 +39,14 @@ void Encoder::init() {
     pinMode(bPin, INPUT_PULLUP);
     
     //Set up the encoder interrupt pin
+
+    //convert the digital pin to interrupt number
     int intNumA = digitalPinToInterrupt(aPin);
     int intNumB = digitalPinToInterrupt(bPin);
+
+    //save a pointer to this instance, a requirement to make sure that only one specific member
+    //function of a specific instance is called for the interrupts
+
     instance = this;
     attachInterrupt(intNumA, Encoder::isrA, CHANGE);
     attachInterrupt(intNumB, Encoder::isrB, CHANGE);
@@ -49,11 +57,7 @@ void Encoder::init() {
     bPinRegister = portInputRegister(digitalPinToPort(bPin));
     bPinBit = digitalPinToBitMask(bPin);
     
-  /*  encoder.init();
-    //initialize the timer
-    lastTickTime = micros();
-    lastEstTime = lastTickTime;
-    encoder.resetCounter();*/
+    return;
 }
 
 
@@ -64,6 +68,8 @@ void Encoder::init() {
  */
 void Encoder::invertDirection(bool invertDir) {
   this->invertDir = invertDir;
+
+  return;
 }
 
 /**
@@ -92,20 +98,6 @@ int Encoder::estimateSpeed() {
 
   // Return the speed
   return filteredSpeed;/*
-  // Get current values
-  unsigned long curTime = micros();
-  long curAngle = encoder.readMultiTurnAngle();
-
-  // Calculate the speed
-  speed = long(curAngle - lastAngle) * tickConversion / (curTime - lastEstTime);
-  filteredSpeed = speedFilter.updateEstimate(speed);
-
-  // Reset for next time
-  encoder.resetCounter();
-  lastAngle = encoder.readMultiTurnAngle();
-  lastEstTime = micros();
-
-  return filteredSpeed;*/
 }
 
 /**
@@ -144,6 +136,8 @@ void Encoder::tick(bool trigA) {
   } else {
     --ticks;
   }
+
+  return;
 }
 
 
@@ -152,8 +146,11 @@ void Encoder::tick(bool trigA) {
  */
 void Encoder::isrA() {
   instance->tick(true);
+  return;
 }
 
 void Encoder::isrB() {
   instance->tick(false);
+  return;
+  tick
 }

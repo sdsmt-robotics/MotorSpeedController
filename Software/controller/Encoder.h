@@ -31,7 +31,12 @@ public:
 private:
     void tick(bool trigA);
 
-    //Static stuff for interrupt handling
+    //Static stuff for interrupt handling. Make the interrupt functions static so that the 
+    //ISR treats these functions the same for any instance of this class, necessary as 
+    //otherwise the ISR wouldn't know which instance of the member function to call. 
+    //Then define a pointer so that the last instance of this class is treated as the 
+    //only instance that gets interrupted. This is again necessary to make sure that 
+    //the ISR has a specific function to call.
     static void isrA();
     static void isrB();
     static Encoder* instance;
