@@ -129,6 +129,8 @@ int Encoder::getFilteredSpeed() {
 /**
  * Count a tick and set the last tick time.
  * 
+ * NOTE: This ISR takes about 8 microseconds.
+ * 
  * @param trigA - interrupt triggered by channel A or no.
  */
 void Encoder::tick(bool trigA) {

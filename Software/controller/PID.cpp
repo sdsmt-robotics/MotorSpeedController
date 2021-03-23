@@ -1,14 +1,14 @@
 #include "PID.h"
-#include <avr/io.h>
+#include <avr/io.h>  //TODO: Do we need this???
 
 
-PID::PID(double Kp,double Ki, double Kd, double N, 
+PID::PID(float Kp,float Ki, float Kd, float N, 
         unsigned long sample_time)
 {
     setPIDConsts(Kp, Ki, Kd, N, sample_time);
 }
 
-void PID::setPIDConsts(double Kp,double Ki, double Kd, double N, unsigned long sample_time)
+void PID::setPIDConsts(float Kp,float Ki, float Kd, float N, unsigned long sample_time)
 {
     this -> Kd = Kd;
     this -> Kp = Kp;
@@ -36,12 +36,12 @@ void PID::calculateCoeffs()
     ke2 = b2/a0;
 }
 
-double PID::calculatePID(double Input)
+float PID::calculatePID(float Input)
 {
     this->Input = Input;
     /* If over riding this function, add output code here */
 
-
+    // TODO: Use rolling array here.
     e2 = e1;
     e1 = e0;
     u2 = u1;
@@ -75,11 +75,11 @@ void PID::setLimits(int16_t min, int16_t max)
     this->max = max;
 }
 
-void PID::setTarget(double target) {
+void PID::setTarget(float target) {
   this->Setpoint = target;
 }
 
-double PID::getTarget() {
+float PID::getTarget() {
   return Setpoint;
 }
 

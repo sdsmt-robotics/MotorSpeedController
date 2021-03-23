@@ -7,37 +7,37 @@ class PID
 {
     public:
 
-        PID(double Kp,double Ki, double Kd, double N, unsigned long sample_time);
+        PID(float Kp,float Ki, float Kd, float N, unsigned long sample_time);
 
-        double ScaledPIDOutput;
-        double Input;
-        double Setpoint;
+        float ScaledPIDOutput;
+        float Input;
+        float Setpoint;
 
-        double calculatePID(double Input);
+        float calculatePID(float Input);
 
-        void setPIDConsts(double Kp,double Ki, double Kd, double N, 
+        void setPIDConsts(float Kp,float Ki, float Kd, float N, 
         unsigned long sample_time);
         void setLimits(int16_t min, int16_t max);
-        void setTarget(double target);
-        double getTarget();
+        void setTarget(float target);
+        float getTarget();
         void reset();
 
     private:
-        double Ts = 2500/1000000.0; // Sample time in seconds
-        double a0, a1, a2, b0, b1, b2; // Need to define transfer function coefficients
-        double e2,e1,e0,u2,u1,u0,u0_part;
-        double ku1,ku2,ke0,ke1,ke2;
+        float Ts = 2500/1000000.0; // Sample time in seconds
+        float a0, a1, a2, b0, b1, b2; // Need to define transfer function coefficients
+        float e2,e1,e0,u2,u1,u0,u0_part;
+        float ku1,ku2,ke0,ke1,ke2;
 
 
         int16_t min = 0;
         int16_t max = 100;
 
-        double Kp = 10;
-        double Ki = 1;
-        double Kd = 1;
-        double N = 20;
+        float Kp = 10;
+        float Ki = 1;
+        float Kd = 1;
+        float N = 20;
 
-        double PID_output;
+        float PID_output;
 
 
 

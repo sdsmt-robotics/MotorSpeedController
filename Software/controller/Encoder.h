@@ -28,12 +28,14 @@ public:
 
     long lastAngle = 0;
     int ticksPerRotation = 360;
+    static void isrA();
+    static void isrB();
 private:
     void tick(bool trigA);
 
     //Static stuff for interrupt handling
-    static void isrA();
-    static void isrB();
+    //static void isrA();
+    //static void isrB();
     static Encoder* instance;
 
     // Pins and pin registers
