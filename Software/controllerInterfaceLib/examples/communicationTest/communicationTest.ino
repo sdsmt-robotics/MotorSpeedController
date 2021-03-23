@@ -23,10 +23,15 @@ void setup (void) {
 
   // Initialize the SPI communications
   SPI.begin();
-  SPI.setClockDivider(SPI_CLOCK_DIV64);
+  SPI.setClockDivider(SPI_CLOCK_DIV32);
 
   // Initialize the motor control
   motor.init();
+
+  digitalWrite(6, HIGH);
+  digitalWrite(7, HIGH);
+
+  pinMode(3, INPUT);
 
   Serial.println("Begin Oscilating Control");
 }
@@ -37,6 +42,7 @@ void loop (void) {
   int receiveVal;
   static unsigned long lastUpdate = micros();
   static unsigned long numSent = 0;
+  static unsigned long numProcErrors = 0;
   static unsigned long numDelayErrors = 0;
   static unsigned long numOthErrors = 0;
 
@@ -44,25 +50,40 @@ void loop (void) {
   // Get the power level from the speed controller
   if (micros() - lastUpdate > UPDATE_INTERVAL) {
     sendVal++;
-    if (sendVal > 1000)  sendVal = 50;
+    if (sendVal > 400)  sendVal = 50;
     motor.setPower(sendVal);
-    delayMicroseconds(100);
+    delayMicroseconds(200);
     receiveVal = motor.getPower();
 
     numSent++;
-    if (receiveVal == 17) {
+    if (receiveVal == 0) {
+      // Errors where command was received but not processed
+      numProcErrors++;
+    } else if ((sendVal - receiveVal <= 5 && sendVal - receiveVal > 0)  || (sendVal==50 && receiveVal==400)) {
+      // Error where the value was not set in the controller fast enough
       numDelayErrors++;
     } else if (receiveVal != sendVal) {
+      // Some other error
       numOthErrors++;
+    }
+
+    if (receiveVal != sendVal) {
+      Serial.print(sendVal);
+      Serial.print("->");
+      Serial.println(receiveVal);
     }
 
     // Print if error
     if (numSent > 1000) {
+      Serial.print("P: ");
+      Serial.print(numProcErrors / float(numSent) * 100.0);
+      Serial.print("%, D: ");
       Serial.print(numDelayErrors / float(numSent) * 100.0);
-      Serial.print("%, ");
+      Serial.print("%, O: ");
       Serial.print(numOthErrors / float(numSent) * 100.0);
       Serial.println("%");
 
+      numProcErrors = 0;
       numOthErrors = 0;
       numDelayErrors = 0;
       numSent = 0;

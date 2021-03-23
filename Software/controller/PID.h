@@ -1,3 +1,6 @@
+/**
+ * Header for the PID class.
+ */
 #ifndef PID_H
 #define PID_H
 
@@ -47,9 +50,8 @@ private:
     //recalculate the coefficients
     void calculateCoeffs();
 
-    //main values
-    double ScaledPIDOutput;
-    double Setpoint;
+    //target value
+    double target;
 };
 
 #endif

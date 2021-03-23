@@ -23,7 +23,7 @@ private:
     void initPwm();
 
     uint16_t maxPwmDuty;  // Max pwm duty cycle value
-    int pwmPin = 9;  // Hardcoded since this changing some PWM settings
+    int pwmPin = 9;  // Hardcoded since changing some PWM settings
     int dirPin, brakePin;
     bool invertDir = false;
     int power;

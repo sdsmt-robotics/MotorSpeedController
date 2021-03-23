@@ -1,14 +1,19 @@
+/**
+ * Discrete PID class to calculate an output for a process given an input.
+ * 
+ * Reference: https://www.scilab.org/discrete-time-pid-controller-implementation
+ */
+
 #include "PID.h"
-#include <avr/io.h>
 
 /**
 * @brief Description:
 * Constructor for the PID class.
 *
-* @param Kp - double: The proportional magnitude term of the PID loop.
-* @param Ki - double: The integral magnitude term of the PID loop.
-* @param Kd - double: The derivative magnitude term of the PID loop.
-* @param N - double: The low pass filter magnitude.
+* @param Kp - double: The proportional gain term of the PID loop.
+* @param Ki - double: The integral gain term of the PID loop.
+* @param Kd - double: The derivative gain term of the PID loop.
+* @param N - double: The low pass filtering amount.
 * @param sample_time - unsigned long: The sample time.
 *
 * @return none.
@@ -24,10 +29,10 @@ PID::PID(double Kp, double Ki, double Kd, double N,
 * @brief Description:
 * Sets new PID constants.
 *
-* @param Kp - double: The proportional magnitude term of the PID loop.
-* @param Ki - double: The integral magnitude term of the PID loop.
-* @param Kd - double: The derivative magnitude term of the PID loop.
-* @param N - double: The low pass filter magnitude.
+* @param Kp - double: The proportional gain term of the PID loop.
+* @param Ki - double: The integral gain term of the PID loop.
+* @param Kd - double: The derivative gain term of the PID loop.
+* @param N - double: The low pass filtering amount.
 * @param sample_time - unsigned long: The sample time.
 *
 * @return none.
@@ -88,7 +93,7 @@ double PID::calculatePID(double Input)
     //update for the last three inputs
     last_error = previous_error;
     previous_error = current_error;
-    current_error = Setpoint - Input;
+    current_error = target - Input;
 
     last_power = previous_power;
     previous_power = current_power;
@@ -104,18 +109,14 @@ double PID::calculatePID(double Input)
     // Constrain the output
     if (current_power > max)
     {
-        ScaledPIDOutput = max;
+        return max;
     }
     else if (current_power < min)
     {
-        ScaledPIDOutput = min;
-    }
-    else
-    {
-        ScaledPIDOutput = current_power;
+        return min;
     }
 
-    return ScaledPIDOutput;
+    return current_power;
 }
 
 /**
@@ -145,7 +146,7 @@ void PID::setLimits(int16_t min, int16_t max)
 */
 void PID::setTarget(double target)
 {
-    this->Setpoint = target;
+    this->target = target;
 
     return;
 }
@@ -158,7 +159,7 @@ void PID::setTarget(double target)
 */
 double PID::getTarget()
 {
-    return Setpoint;
+    return target;
 }
 
 /**
@@ -170,12 +171,13 @@ double PID::getTarget()
 void PID::reset()
 {
     //set all values to zero
+
+    // Reset errors
     current_error = 0;
     previous_error = 0;
     last_error = 0;
 
-    ScaledPIDOutput = 0;
-
+    // Reset outputs
     current_power = 0;
     previous_power = 0;
     last_power = 0;

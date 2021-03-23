@@ -1,15 +1,8 @@
 /* 
- * Class for Encoder speed calculator.
+ * Class for the Encoder.
  * This class provides functions for tracking encoder ticks and determining speed.
  * 
- * init() - initialize the motor class.
- * setPower(int power) - set the power level for the motor
- * brake() - set the motor to brake.
- * setDirection(Direction invertDir) - set the default the motor direction.
- * getDirection() - get the motor direction
- * 
- * Note: this class is only set up to support four encoders. More is possible, 
- * but they will have to be added.
+ * Note: this class is only set up to support one encoder. Attempting to use it for more will break things.
  */
 
 #include "Encoder.h"
@@ -27,11 +20,10 @@ Encoder * Encoder::instance;
  */
 Encoder::Encoder(int aPin, int bPin, int ticksPerRotation) 
     : aPin(aPin), bPin(bPin), ticksPerRotation(ticksPerRotation), speedFilter(300, 300, 0.025)  {
-//      : encoder(dioPin, csPin, clkPin), speedFilter(150, 150, 0.05)  {
 }
 
 /**
- * @brief Initialize the motor.
+ * @brief Initialize the encoder.
  */
 void Encoder::init() {
     //Setup control pins
@@ -57,6 +49,10 @@ void Encoder::init() {
     bPinRegister = portInputRegister(digitalPinToPort(bPin));
     bPinBit = digitalPinToBitMask(bPin);
     
+    //initialize the timer
+    lastTickTime = micros();
+    lastEstTime = lastTickTime;
+
     return;
 }
 
@@ -97,7 +93,7 @@ int Encoder::estimateSpeed() {
 
 
   // Return the speed
-  return filteredSpeed;/*
+  return filteredSpeed;
 }
 
 /**
@@ -120,6 +116,8 @@ int Encoder::getFilteredSpeed() {
 
 /**
  * Count a tick and set the last tick time.
+ * 
+ * NOTE: This ISR takes about 8 microseconds.
  * 
  * @param trigA - interrupt triggered by channel A or no.
  */

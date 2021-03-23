@@ -8,12 +8,13 @@
  * setDirection(Direction invertDir) - set the default the motor direction.
  * getDirection() - get the motor direction
  * 
+ * NOTE: While the direction pin and the brake pin can be changed, PWM pin is hardcoded!
  */
 
 #include "Nidec24H.h"
 
 /**
- * @brief Constructor for the class. PWM Pin must be 9 on atmega328!
+ * @brief Constructor for the class.
  * 
  * @param dirPin - pin to toggle motor direction.
  * @param brakePin - pin to brake to toggle motor braking.
@@ -37,6 +38,11 @@ void Nidec24H::init() {
     setPower(0);
 }
 
+/**
+ * @brief Initialize the PWM settings for the motor.
+ * 
+ * NOTE: the PWM is hardcoded to pin 9!
+ */
 void Nidec24H::initPwm() {
     /*
     A bit of explanation for those who care...
@@ -65,7 +71,7 @@ void Nidec24H::initPwm() {
     //  - COM = 0b10 (clear output on match when upcounting, set output on match when downcounting)
     //  - WGM = 0b1010 (wave generation mode = phase correct PWM with ICR4 as the prescaler)
     //  - CS = 0b001 (Clock source 1, no prescaling)
-    ICR1   = (F_CPU/8000)/2;      // Get the prescaler for 25k. Have to divide by two since phase correct.
+    ICR1   = (F_CPU/8000)/2;      // Get the prescaler for 8k. Have to divide by two since phase correct.
     OCR1A  = 0;                    // Set initial duty cycle to 0%
     TCCR1A = _BV(COM1A1) | _BV(WGM11);
     TCCR1B = _BV(WGM13) | _BV(CS10);
@@ -135,7 +141,7 @@ int Nidec24H::getPower() {
  */
 void Nidec24H::brake() {
     //set to some power
-    analogWrite(pwmPin, 50);
+    setPwm(100);
 
     //Turn on the brake (active low)
     digitalWrite(brakePin, LOW);
