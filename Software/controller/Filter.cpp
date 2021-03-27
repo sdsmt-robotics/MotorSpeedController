@@ -46,7 +46,7 @@ Filter::~Filter()
  * 
  * @param fillVal - initial value for the filter. (Defaults to 0.)
  */
-void Filter::reset(int fillVal)
+void Filter::reset(double fillVal)
 {
   //fill the buffer with the given value
   for (int i = 0; i < bufferSize; i++)
@@ -67,9 +67,9 @@ void Filter::reset(int fillVal)
  * @param newVal - value to add
  * @return the filtered value
  */
-int Filter::filter(int newVal)
+double Filter::filter(double newVal)
 {
-  int oldVal = buffer[curIndex];
+  double oldVal = buffer[curIndex];
 
   //add the new value
   buffer[curIndex] = newVal;
@@ -94,7 +94,7 @@ int Filter::filter(int newVal)
  * 
  * @return the filtered value.
  */
-int Filter::getFilteredVal()
+double Filter::getFilteredVal()
 {
   return filteredVal;
 }
