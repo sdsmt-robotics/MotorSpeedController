@@ -15,9 +15,9 @@
  * @param Ki - dirivative term gain
  * @param N - filtering amount
  */
-PID::PID(float Kp,float Ki, float Kd, float N, unsigned long sample_time)
+PID::PID(float Kp,float Ki, float Kd, float Kf, float N, unsigned long sample_time)
 {
-    setConstants(Kp, Ki, Kd, N, sample_time);
+    setConstants(Kp, Ki, Kd, Kf, N, sample_time);
 }
 
 /**
@@ -28,11 +28,12 @@ PID::PID(float Kp,float Ki, float Kd, float N, unsigned long sample_time)
  * @param Ki - dirivative term gain
  * @param N - filtering amount
  */
-void PID::setConstants(float Kp, float Ki, float Kd, float N, unsigned long sample_time)
+void PID::setConstants(float Kp, float Ki, float Kd, float Kf, float N, unsigned long sample_time)
 {
     this -> Kd = Kd;
     this -> Kp = Kp;
     this -> Ki = Ki;
+    this -> Kf = Kf;
     this -> N  = N;
     this -> Ts = sample_time/1000000.0;
     
@@ -82,6 +83,7 @@ float PID::calculateOutput(float input)
     // Calculate the new error and output
     e0 = target - input;
     output = -ku1 * u1 - ku2 * u2 + ke0 * e0 + ke1 * e1 + ke2 * e2;
+    //output = target*Kf;
     
     // Constrain and return the output
     if (output > max) {

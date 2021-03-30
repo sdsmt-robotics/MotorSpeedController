@@ -26,7 +26,6 @@
 #include "Nidec24H.h"
 #include "Encoder.h"
 #include "PID.h"
-#include <SimpleKalmanFilter.h>  // https://github.com/denyssene/SimpleKalmanFilter
 #include <stdint.h>
 
 // Define the pins
@@ -59,6 +58,8 @@ volatile bool dataReceived = false;  // Track if we have new data
 const byte SPI_COM_END = 2;          // Number of the final send/receive byte
 const long SPI_TIMEOUT = 100;        // Max time a byte should take (in microseconds)
 
+const int MAX_RPM = 6000;  // Maximum RPM we could ask the motor to run
+
 // Struct for receiving data
 union SpiData
 {
@@ -75,7 +76,22 @@ union SpiData
 unsigned long lastUpdate = 0;
 
 // Controller update interval in microseconds
-const unsigned long UPDATE_INTERVAL = 2500;
+const unsigned long UPDATE_INTERVAL = 2000;
+
+// Define blink patterns
+union BlinkPattern
+{
+  unsigned long time[2];
+  struct
+  {
+    unsigned long offTime;
+    unsigned long onTime;
+  };
+};
+const BlinkPattern BRAKE_BLINK = {1000, 200};
+const BlinkPattern SPEED_BLINK = {500, 500};
+const BlinkPattern POWER_BLINK = {200, 1000};
+const BlinkPattern TIMEOUT_BLINK = {200, 200};
 
 // Motor control states
 enum MotorState {SPEED_CONTROL, POWER_CONTROL, BRAKE};
@@ -91,16 +107,16 @@ Encoder encoder(ENC_A_PIN, ENC_B_PIN, 360);
 
 //motor speed controller
 // TODO: add support for reading and saving these values from EEPROM
-float kp = 5, ki = 7, kd = 0.5 , N = 10;
+//float kp = 5, ki = 7, kd = 0.5 , kf = 1/10.0, N = 10;
+float kp = 5, ki = 12, kd = 0.2 , kf = 1/10.0, N = 10;
+//float kp = 1.0, ki = 0.0, kd = 0.0 , kf = 0.16, N = 1;
 // PID(Kp, Ki, Kd, N, sample_time)
-PID pid(kp, ki, kd, N, UPDATE_INTERVAL);
+PID pid(kp, ki, kd, kf, N, UPDATE_INTERVAL);
 double setpoint = 1;
 
 
 //=====SETUP=========================================================
 void setup() {
-  pinMode(LED_PIN, OUTPUT);
-  
   // Initialize the SPI for the device
   initSpi();
 
@@ -114,8 +130,9 @@ void setup() {
   // Initialize the encoder 
   encoder.init();
 
-  // Turn on the LED
-  ledOn();
+  // Init LED control
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
 }
 
 
@@ -138,23 +155,43 @@ void loop() {
       
       lastUpdate = micros();
     }
+
+    // Update the LED blink
+    updateLed();
   }
 }
 
 /**
- * @brief Turn on the LED.
+ * @brief Control the LED blink pattern.
  */
-void ledOn() {
-  // Turn on the LED
-  digitalWrite(LED_PIN, HIGH);
-}
+void updateLed() {
+  static bool state = LOW;
+  static unsigned long lastTransition = millis();
+  bool newState = state;
 
-/**
- * @brief Turn off the LED.
- */
-void ledOff() {
-  // Turn off the LED
-  digitalWrite(LED_PIN, LOW);
+  // Figure out what pattern should blink
+  if (motorState == SPEED_CONTROL) {
+    if (millis() - lastTransition > SPEED_BLINK.time[state]) {
+      newState = !state;
+    }
+  } else if (motorState == POWER_CONTROL) {
+    if (motor.getPower() == 0) {
+      newState = HIGH;
+    } else if (millis() - lastTransition > POWER_BLINK.time[state]) {
+      newState = !state;
+    }
+  } else if (motorState == BRAKE) {
+    if (millis() - lastTransition > BRAKE_BLINK.time[state]) {
+      newState = !state;
+    }
+  }
+
+  // Update the LED state if needed
+  if (state != newState) {
+    digitalWrite(LED_PIN, newState);
+    state = newState;
+    lastTransition = millis();
+  }
 }
 
 //=====SPI functions==========================
@@ -230,6 +267,13 @@ void handleReceivedData(byte command, int value) {
           if (motorState != SPEED_CONTROL) { // Do a reset if changing modes so don't jump.
             pid.reset();
           }
+
+          // Consrain to make sure not trying to set to high
+          if (value > MAX_RPM)
+            value = MAX_RPM;
+          else if (value < -MAX_RPM)
+            value = -MAX_RPM;
+          
           pid.setTarget(value);
           motorState = SPEED_CONTROL;
           break;

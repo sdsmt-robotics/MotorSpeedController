@@ -17,7 +17,7 @@ Encoder * Encoder::instance;
  * @param ticksPerRotation - Number of encoder ticks per rotation.
  */
 Encoder::Encoder(int aPin, int bPin, int ticksPerRotation) 
-    : aPin(aPin), bPin(bPin), ticksPerRotation(ticksPerRotation), speedFilter(300, 300, 0.025)  {
+    : aPin(aPin), bPin(bPin), ticksPerRotation(ticksPerRotation), speedFilter(100, 100, 0.08)  { //speedFilter(300, 300, 0.025)
 }
 
 /**

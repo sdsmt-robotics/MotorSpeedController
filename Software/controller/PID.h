@@ -8,11 +8,11 @@
 
 class PID {
     public:
-        PID(float Kp, float Ki, float Kd, float N, unsigned long sample_time);
+        PID(float Kp, float Ki, float Kd, float Kf, float N, unsigned long sample_time);
 
         float calculateOutput(float input);
 
-        void setConstants(float Kp,float Ki, float Kd, float N, unsigned long sample_time);
+        void setConstants(float Kp,float Ki, float Kd, float Kf, float N, unsigned long sample_time);
         void setLimits(int16_t min, int16_t max);
         void setTarget(float target);
         float getTarget();
@@ -32,6 +32,7 @@ class PID {
         float Kp = 10;
         float Ki = 1;
         float Kd = 1;
+        float Kf = 0;
         float N = 20;
 
         float output;

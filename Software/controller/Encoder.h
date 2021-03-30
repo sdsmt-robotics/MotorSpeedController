@@ -6,7 +6,7 @@
 #define ENCODER_H
 
 #include "Arduino.h"
-#include <SimpleKalmanFilter.h>
+#include <SimpleKalmanFilter.h>  // https://github.com/denyssene/SimpleKalmanFilter
 
 class Encoder {
 public:
