@@ -21,9 +21,18 @@ Contains code for the controller itself and code for a master device to interfac
 | SS*     | SS               |  
 
 *The SS pin must be used for *at least one* of the connections. Additional speed controllers may use other digital IO pins.  
+  
+## Status LED  
+The green LED on the board will indicate state of the controller. The key is as follows.
+| State         | Pattern    |
+|---------------|------------|
+| Off           | ---------  |
+| Brake         | -\_\_-\_\_-\_\_  |
+| Speed Control | --\_\_--\_\_-- |
+| Power Control | --\_--\_--\_  |
+| Timeout       | -\_-\_-\_-\_-  |  
  
- 
- ## Interface Lib Usage  
+## Interface Lib Usage  
 **Create:**  
 Create an instance of the class.  
 
