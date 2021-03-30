@@ -52,7 +52,6 @@ void loop (void) {
     sendVal++;
     if (sendVal > 400)  sendVal = 50;
     motor.setPower(sendVal);
-    delayMicroseconds(200);
     receiveVal = motor.getPower();
 
     numSent++;

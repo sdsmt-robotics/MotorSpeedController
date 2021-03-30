@@ -44,6 +44,8 @@ void Nidec24hController::init() {
   // Initialize motor control
   invertDirection(0);
   setPower(0);
+  
+  lastCommunication = micros();
 }
 
 
@@ -140,6 +142,9 @@ int Nidec24hController::communicate(uint8_t command, int sendVal) {
   union { int16_t val; struct { uint8_t lsb; uint8_t msb; }; } in, out;
   
   out.val = sendVal;
+  
+  // Wait until minimum time has elapsed (otherwise speed controller can't keep up)
+  while (micros() - lastCommunication < MIN_SEND_INTERVAL) { }
 
   noInterrupts();
   // Select the chip to control
@@ -160,6 +165,8 @@ int Nidec24hController::communicate(uint8_t command, int sendVal) {
   digitalWrite(ssPin, HIGH);
   delayMicroseconds(TRANSFER_BYTE_DELAY/2);
   interrupts();
+  
+  lastCommunication = micros();
 
   // Turn the two values into a 16-bit value
   return in.val;

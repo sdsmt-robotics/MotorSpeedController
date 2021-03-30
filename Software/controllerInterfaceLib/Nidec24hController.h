@@ -28,6 +28,8 @@ private:
     int ssPin;
 
     const int TRANSFER_BYTE_DELAY = 80;
+    const unsigned long MIN_SEND_INTERVAL = 150; // Minimum time between communicaitons in us.
+    unsigned long lastCommunication = 0;
 
     int getVal(uint8_t command);
     void sendVal(uint8_t command, int value);
