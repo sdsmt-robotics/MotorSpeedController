@@ -19,6 +19,7 @@
 #define SET_POWER        0x02
 #define SET_BRAKE        0x03
 #define SET_INVERT_DIR   0x04
+#define SET_TIMEOUT      0x05
 
 #define GETTER_COMAND    0x10
 #define GET_SPEED        0x00 | GETTER_COMAND
@@ -65,6 +66,15 @@ void Nidec24hController::setSpeed(int speed) {
  */
 void Nidec24hController::setPower(int power) {
   sendVal(SET_POWER, power);
+}
+
+/**
+ * @brief Set the timeout for the motor. Setting to 0 will disable timeout.
+ * 
+ * @param timeout - new timeout for the motor (in ms)
+ */
+void Nidec24hController::setTimeout(unsigned timeout) {
+  sendVal(SET_TIMEOUT, timeout);
 }
 
 /**

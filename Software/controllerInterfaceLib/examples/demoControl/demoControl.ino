@@ -66,17 +66,24 @@ void loop (void)
       Serial.print("Invert set to: ");
       Serial.println(value);
      break;
-     case '5': // Get speed
+     case '5': // Set invert direction
+      Serial.println("Set timeout for the motor (ms): ");
+      value = readSerialVal();
+      motor.setTimeout(value);
+      Serial.print("Timeout set to: ");
+      Serial.println(value);
+     break;
+     case '6': // Get speed
       Serial.print("Current speed: ");
       value = motor.getSpeed();
       Serial.println(value);
      break;
-     case '6': // Get power
+     case '7': // Get power
       Serial.print("Current power: ");
       value = motor.getPower();
       Serial.println(value);
      break;
-     case '7': // Get target speed
+     case '8': // Get target speed
       Serial.print("Target speed: ");
       value = motor.getTargetSpeed();
       Serial.println(value);
@@ -95,9 +102,10 @@ void printMenu() {
   Serial.println("2 - Set Power (-1000 to 1000)");
   Serial.println("3 - Brake");
   Serial.println("4 - Set Direction Inverted");
-  Serial.println("5 - Get Speed");
-  Serial.println("6 - Get Power");
-  Serial.println("7 - Get Target Speed");
+  Serial.println("5 - Set Timeout");
+  Serial.println("6 - Get Speed");
+  Serial.println("7 - Get Power");
+  Serial.println("8 - Get Target Speed");
   Serial.println();
 }
 

@@ -18,6 +18,7 @@ public:
     void setPower(int power);
     void brake();
     void invertDirection(bool invertDir);
+    void setTimeout(unsigned timeout);
 
     int getSpeed();
     int getPower();

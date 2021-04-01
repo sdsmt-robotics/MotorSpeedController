@@ -34,7 +34,7 @@ void setup (void) {
 //===LOOP=============================
 void loop (void) {
   // How the robot is driving
-  const int rotation = 500;   // chassis rotation (rpm)
+  const int rotation = 600;   // chassis rotation (rpm)
   const int translation = 1;  // Driving feet per sec
 
   // Calculate the components of motor rotation for the translating and chassis rotation

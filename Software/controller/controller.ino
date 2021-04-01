@@ -44,6 +44,7 @@
 #define SET_POWER        0x02
 #define SET_BRAKE        0x03
 #define SET_INVERT_DIR   0x04
+#define SET_TIMEOUT      0x05
 
 #define GETTER_COMAND    0x10
 #define GET_SPEED        0x00 | GETTER_COMAND
@@ -73,7 +74,9 @@ union SpiData
 
 // Time last update received from the controller
 // TODO: add a timeout?
-unsigned long lastUpdate = 0;
+unsigned long lastReceive = 0;
+unsigned long timeout = 0;
+volatile bool receivedCommand = false;
 
 // Controller update interval in microseconds
 const unsigned long UPDATE_INTERVAL = 2000;
@@ -94,8 +97,8 @@ const BlinkPattern POWER_BLINK = {200, 1000};
 const BlinkPattern TIMEOUT_BLINK = {200, 200};
 
 // Motor control states
-enum MotorState {SPEED_CONTROL, POWER_CONTROL, BRAKE};
-MotorState motorState = POWER_CONTROL;
+enum MotorState {SPEED_CONTROL, POWER_CONTROL, BRAKE, TIMEOUT};
+volatile MotorState motorState = TIMEOUT;
 
 //Create the motor control object
 //Nidec24H(dirPin, brakePin)
@@ -133,6 +136,8 @@ void setup() {
   // Init LED control
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
+
+  lastReceive = millis();
 }
 
 
@@ -141,19 +146,31 @@ void loop() {
   static unsigned long lastUpdate = micros();  // Last time the current speed and motor control PID got updated
 
   while (true) {
+    // Timeout if haven't received a transmission in a while
+    if (receivedCommand) {
+      lastReceive = millis();
+      receivedCommand = false;
+    } else if ((motorState != TIMEOUT) && (timeout != 0) && (millis() - lastReceive > timeout)) {
+      motorState = TIMEOUT;
+      motor.setPower(0);
+    }
+
     // Control the motor
-    if (micros() - lastUpdate > UPDATE_INTERVAL) {
-      encoder.estimateSpeed();
+    if (motorState != TIMEOUT) {
+      // Control the motor
+      if (micros() - lastUpdate > UPDATE_INTERVAL) {
+        encoder.estimateSpeed();
+        
+        if (motorState == SPEED_CONTROL) {
+          //Get the power level from the speed controller
+          int power = pid.calculateOutput(encoder.getFilteredSpeed());
       
-      if (motorState == SPEED_CONTROL) {
-        //Get the power level from the speed controller
-        int power = pid.calculateOutput(encoder.getFilteredSpeed());
-    
-        //set the motor power
-        motor.setPower(power);
+          //set the motor power
+          motor.setPower(power);
+        }
+        
+        lastUpdate = micros();
       }
-      
-      lastUpdate = micros();
     }
 
     // Update the LED blink
@@ -184,6 +201,10 @@ void updateLed() {
     if (millis() - lastTransition > BRAKE_BLINK.time[state]) {
       newState = !state;
     }
+  } else if (motorState == TIMEOUT) {
+    if (millis() - lastTransition > TIMEOUT_BLINK.time[state]) {
+      newState = !state;
+    }
   }
 
   // Update the LED state if needed
@@ -207,8 +228,23 @@ void initSpi() {
 
   // turn on interrupts
   SPCR |= _BV(SPIE);
-}
+  
 
+  // turn on SPI in slave mode
+  SPCR |= _BV(SPE);
+
+  // turn on interrupts
+  SPCR |= _BV(SPIE);
+
+  // Initialize SPI timeout timer
+  TIMSK2 = 0; // Diable interrupts
+  TCCR2A = 0;
+  TCCR2B = 0;  // 
+  TCNT2  = 0;  // Clear counter
+
+  TCCR2A |= (1 << WGM21);                // CTC mode
+  TCCR2B |= (1 << CS21) | (1 << CS20);   // 128 prescaler 
+}
 
 /**
  * @brief Construct the ISR for the SPI communications. Called when SPDR gets a new byte.
@@ -247,8 +283,11 @@ ISR (SPI_STC_vect) {
   // Handle data we received
   if (success) 
     handleReceivedData(spiCommand, spiVal);
-    
+
   interrupts();
+  
+  // Let the loop know we got a communicaiton
+  receivedCommand = true;
 }
 
 
@@ -294,8 +333,12 @@ void handleReceivedData(byte command, int value) {
           if (motorState == SPEED_CONTROL) { // Do a reset if in speed control mode so don't jump.
             pid.reset();
           }
-        break;
+          break;
+        case SET_TIMEOUT:
+          timeout = value;
+          break;
       }
+      
     }
 }
 
@@ -306,7 +349,6 @@ void handleReceivedData(byte command, int value) {
  * @return true if transmission success, false otherwise (timeout).
  */
 bool transferData(volatile int16_t &data) {
-    static unsigned long start = micros();
     static SpiData in, out;
 
     in.val = data;
@@ -314,9 +356,9 @@ bool transferData(volatile int16_t &data) {
     // Send/Receive the LSB
     SPDR = in.lsb;
     asm volatile("nop");
-    start = micros();
+    resetMicroTimer();
     while (!spiByteReceived()) {
-      if (micros() - start > (SPI_TIMEOUT << 1)) {
+      if (microTimer() > (SPI_TIMEOUT << 1)) {
         return false;
       }
     }
@@ -325,9 +367,9 @@ bool transferData(volatile int16_t &data) {
     // Send/Receive the MSB
     SPDR = in.msb;
     asm volatile("nop");
-    start = micros();
+    resetMicroTimer();
     while (!spiByteReceived()) {
-      if (micros() - start > SPI_TIMEOUT) {
+      if (microTimer() > SPI_TIMEOUT) {
         return false;
       }
     }
@@ -335,6 +377,22 @@ bool transferData(volatile int16_t &data) {
     data = out.val;
     return true;
 }
+
+/**
+ * Get the current time in us since reset.
+ */
+unsigned microTimer() {
+  // 16 MHz cpu, 32 prescaler
+  return TCNT2 * 2;
+}
+
+/**
+ * Reset the timer.
+ */
+void resetMicroTimer() {
+  TCNT2 = 0;
+}
+
 
 /**
 * @brief check if a SPI transmission has been received
